@@ -1,0 +1,94 @@
+{
+  "urlPathPatterns": [
+    "terms",
+    "terms-of-service",
+    "terms_of_service",
+    "tos",
+    "terms-of-use",
+    "terms_of_use",
+    "legal",
+    "agreement",
+    "user-agreement",
+    "service-agreement",
+    "eula",
+    "license",
+    "privacy",
+    "privacy-policy",
+    "conditions",
+    "terms-and-conditions",
+    "contract",
+    "subscription-terms",
+    "master-service-agreement",
+    "msa",
+    "acceptable-use",
+    "aup",
+    "dpa",
+    "data-processing",
+    "sla",
+    "service-level"
+  ],
+  "urlQueryParams": ["terms", "tos", "legal", "agreement", "eula"],
+  "metaKeywords": [
+    "terms of service",
+    "terms of use",
+    "user agreement",
+    "service agreement",
+    "end user license",
+    "eula",
+    "privacy policy",
+    "legal agreement",
+    "subscription agreement",
+    "master service agreement",
+    "terms and conditions"
+  ],
+  "titlePatterns": [
+    "terms of service",
+    "terms of use",
+    "user agreement",
+    "service agreement",
+    "privacy policy",
+    "terms and conditions",
+    "end user license",
+    "eula",
+    "legal",
+    "agreement"
+  ],
+  "domSelectors": {
+    "headings": ["h1", "h2", "h3", "[role='heading']"],
+    "links": "a[href*='terms'], a[href*='legal'], a[href*='agreement'], a[href*='privacy'], a[href*='eula']",
+    "articleContainers": ["article", "[role='article']", ".terms-content", ".legal-content", ".tos-content", "#terms", "#legal"]
+  },
+  "linkTextPatterns": [
+    "terms of service",
+    "terms of use",
+    "user agreement",
+    "privacy policy",
+    "legal",
+    "agreement",
+    "eula",
+    "terms and conditions"
+  ],
+  "pdfIndicators": {
+    "urlSuffix": ".pdf",
+    "mimeParam": "application/pdf",
+    "viewerTitlePatterns": ["terms", "agreement", "legal", "privacy", "eula"]
+  },
+  "saasProductIndicators": {
+    "urlPathPatterns": ["/pricing", "/plans", "/signup", "/sign-up", "/login", "/dashboard", "/api", "/integrations", "/docs", "/developers", "/app"],
+    "hostnamePatterns": ["app.", "dashboard.", "cloud.", "platform.", ".io", ".cloud", ".software", ".app", "saas"],
+    "linkTextPatterns": ["pricing", "plans", "subscription", "free trial", "sign up", "login", "dashboard", "api", "integrations", "developers", "start free trial", "get started"],
+"metaKeywords": ["software as a service", "saas", "subscription", "cloud platform", "api", "integrations", "free trial", "pricing plans", "dashboard"]
+  },
+  "blocklistHostPathPatterns": [
+    { "host": "google.", "path": "/search" },
+    { "host": "bing.com", "path": "/search" },
+    { "host": "duckduckgo.com", "path": "" },
+    { "host": "yahoo.com", "path": "/search" },
+    { "host": "baidu.com", "path": "" },
+    { "host": "ecosia.org", "path": "" },
+    { "host": "startpage.com", "path": "" },
+    { "host": "wikipedia.org", "path": "" },
+    { "host": "wikimedia.org", "path": "" }
+  ]
+}
+}
