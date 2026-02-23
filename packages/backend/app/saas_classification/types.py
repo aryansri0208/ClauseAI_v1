@@ -4,7 +4,7 @@ Type definitions for SaaS category classification.
 All input/output structures are defined here for clarity and reuse.
 """
 
-from typing import TypedDict, Any
+from typing import TypedDict, Any, NotRequired
 
 
 class VendorInput(TypedDict, total=False):
@@ -42,7 +42,23 @@ class ClassificationResult(TypedDict):
 
 
 class ClassifySaaSResult(TypedDict):
-    """Public API result: category, confidence, and benchmark key."""
+    """
+    Public API result: category, confidence, and benchmark key.
+    Additional fields may be added over time in a backwards-compatible way.
+    """
     category: str
     confidence: float
     benchmark_key: str
+    category_profile: NotRequired[dict[str, Any]]
+
+
+class RankedProduct(TypedDict):
+    name: str
+    score: float
+    reason: str
+
+
+class CategoryProfile(TypedDict):
+    category_name: str
+    confidence: float
+    top_products: list[RankedProduct]

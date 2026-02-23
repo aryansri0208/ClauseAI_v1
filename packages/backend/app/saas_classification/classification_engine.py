@@ -7,6 +7,8 @@ confidence (0-1), and per-category score breakdown. Deterministic and explainabl
 
 from __future__ import annotations
 
+import os
+
 from app.saas_classification.types import ScoreBreakdown
 from app.saas_classification.taxonomy import (
     get_taxonomy,
@@ -20,6 +22,28 @@ from app.saas_classification.feature_extractor import ExtractedSignals
 MAX_SCORE_FOR_FULL_CONFIDENCE = 15.0
 # Penalty per negative signal match (reduces category score)
 NEGATIVE_SIGNAL_PENALTY = 2.0
+
+# Phrase matches should be stronger than single-token matches.
+WEIGHT_WEBSITE_PHRASE = 2.0
+
+# Generic payments tokens commonly appear on non-payments sites (cloud billing pages, etc.).
+# We downweight these for the Payments category unless a higher-signal phrase matches.
+GENERIC_PAYMENTS_TOKENS: set[str] = {
+    "payment",
+    "payments",
+    "billing",
+    "checkout",
+    "transaction",
+    "transactions",
+    "merchant",
+    "card",
+    "refund",
+    "chargeback",
+}
+GENERIC_PAYMENTS_TOKEN_MULTIPLIER = 0.25
+
+# Enable temporary debug logging with: SAAS_CLASSIFIER_DEBUG=1
+DEBUG_SCORING = os.getenv("SAAS_CLASSIFIER_DEBUG") == "1"
 
 
 def _normalize_keyword(key: str) -> str:
@@ -47,18 +71,24 @@ def _score_category(
     negative_set = _category_keywords_normalized(definition["negative_signals"])
 
     # --- Token-level website scoring (unchanged) ---
-    website_score = 0.0
+    website_token_score = 0.0
     for token in signals["website_tokens"]:
         if token in keywords_set:
-            website_score += WEIGHT_WEBSITE_KEYWORD
+            increment = WEIGHT_WEBSITE_KEYWORD
+            if category_id == "Payments" and token in GENERIC_PAYMENTS_TOKENS:
+                increment *= GENERIC_PAYMENTS_TOKEN_MULTIPLIER
+            website_token_score += increment
 
     # --- Phrase-level website scoring: multi-word keywords only ---
     # Build normalized combined website text (from feature extractor); fallback to empty if absent.
     website_text_normalized = signals.get("website_text_normalized", "")
+    website_phrase_score = 0.0
     for keyword in definition["keywords"]:
         phrase = _normalize_keyword(keyword)
         if " " in phrase and phrase in website_text_normalized:
-            website_score += WEIGHT_WEBSITE_KEYWORD
+            website_phrase_score += WEIGHT_WEBSITE_PHRASE
+
+    website_score = website_token_score + website_phrase_score
 
     metadata_score = 0.0
     for val in signals["metadata_values"]:
@@ -88,6 +118,14 @@ def _score_category(
             negative_penalty += NEGATIVE_SIGNAL_PENALTY
 
     total_raw = max(0.0, website_score + metadata_score + product_tag_score - negative_penalty)
+
+    if DEBUG_SCORING:
+        print(
+            f"[saas_classify] category={category_id} "
+            f"token_score={website_token_score:.2f} "
+            f"phrase_score={website_phrase_score:.2f} "
+            f"total_score={total_raw:.2f}"
+        )
 
     breakdown: ScoreBreakdown = {
         "website_keyword_score": round(website_score, 2),

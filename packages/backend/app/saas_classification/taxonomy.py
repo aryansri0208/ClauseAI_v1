@@ -96,11 +96,31 @@ def get_taxonomy() -> dict[str, CategoryDefinition]:
         },
         "Infrastructure": {
             "keywords": [
+                # Cloud infrastructure (strong vendor + platform signals)
+                "aws", "amazon web services", "gcp", "google cloud", "google cloud platform",
+                "azure", "microsoft azure", "cloud infrastructure", "cloud platform",
+                # Common infra capabilities
                 "infrastructure", "cloud", "hosting", "cdn", "database", "storage",
                 "compute", "server", "edge", "serverless", "iaas", "paas",
+                "kubernetes", "container", "containers", "docker",
                 "backup", "disaster recovery", "scaling", "load balancer",
             ],
-            "metadata_triggers": ["infrastructure", "cloud", "hosting", "database", "storage"],
+            "metadata_triggers": [
+                "infrastructure",
+                "cloud",
+                "cloud infrastructure",
+                "hosting",
+                "database",
+                "storage",
+                "compute",
+                "aws",
+                "amazon web services",
+                "gcp",
+                "google cloud",
+                "google cloud platform",
+                "azure",
+                "microsoft azure",
+            ],
             "negative_signals": [],
         },
         "Collaboration": {

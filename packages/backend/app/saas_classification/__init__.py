@@ -17,6 +17,7 @@ from app.saas_classification.types import (
 from app.saas_classification.feature_extractor import extract_signals, ExtractedSignals
 from app.saas_classification.classification_engine import classify
 from app.saas_classification.benchmark_selector import get_benchmark_key
+from app.saas_classification.product_ranking import rank_products_for_category
 from app.saas_classification.taxonomy import get_taxonomy, WEIGHT_WEBSITE_KEYWORD, WEIGHT_METADATA_MATCH, WEIGHT_EXACT_PRODUCT_TAG
 
 
@@ -55,11 +56,21 @@ def classify_saas(vendor_input: VendorInput) -> ClassifySaaSResult:
     signals = extract_signals(payload)
     category, confidence, _score_breakdown = classify(signals)
     benchmark_key = get_benchmark_key(category)
-    return ClassifySaaSResult(
+    vendor_name = str(payload.get("name") or "")
+    top_products = rank_products_for_category(category, vendor_name=vendor_name, signals=signals, top_n=3)
+
+    result = ClassifySaaSResult(
         category=category,
         confidence=round(confidence, 4),
         benchmark_key=benchmark_key,
     )
+    # Backwards-compatible extension: extra structured output for downstream use.
+    result["category_profile"] = {
+        "category_name": category,
+        "confidence": round(confidence, 4),
+        "top_products": top_products,
+    }
+    return result
 
 
 __all__ = [
@@ -73,4 +84,5 @@ __all__ = [
     "classify",
     "get_benchmark_key",
     "get_taxonomy",
+    "rank_products_for_category",
 ]
