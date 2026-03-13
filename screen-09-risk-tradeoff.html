@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Risk &amp; Tradeoff Analysis</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;margin-left:16px;}
+  .breadcrumb .active{color:var(--text2);}
+  .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .btn{padding:8px 18px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+  .btn-primary{background:var(--accent);color:#fff;font-weight:600;}
+  .btn-primary:hover{background:#3a4a62;}
+
+  .page{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 52px);}
+
+  /* LEFT */
+  .left{padding:32px 36px;display:flex;flex-direction:column;gap:22px;border-right:1px solid var(--border);overflow-y:auto;}
+  .right{padding:32px 36px;display:flex;flex-direction:column;gap:22px;overflow-y:auto;}
+
+  .section-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;}
+
+  /* Candidate comparison header */
+  .compare-header{display:grid;grid-template-columns:140px 1fr 1fr;gap:0;border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .ch-col{padding:14px 16px;}
+  .ch-col:not(:last-child){border-right:1px solid var(--border);}
+  .ch-col.current{background:rgba(255,107,107,0.03);}
+  .ch-col.proposed{background:rgba(0,255,148,0.03);}
+  .ch-tag{font-family:var(--mono);font-size:8px;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;}
+  .ch-tag.current{color:var(--text3);}
+  .ch-tag.proposed{color:var(--accent4);}
+  .ch-name{font-size:13px;font-weight:500;}
+  .ch-provider{font-family:var(--mono);font-size:10px;color:var(--text3);margin-top:2px;}
+  .ch-label-col{display:flex;align-items:center;font-family:var(--mono);font-size:10px;color:var(--text3);}
+
+  /* Comparison metric rows */
+  .compare-table{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .ct-row{display:grid;grid-template-columns:140px 1fr 1fr;border-bottom:1px solid var(--border);}
+  .ct-row:last-child{border-bottom:none;}
+  .ct-cell{padding:11px 16px;font-size:12px;}
+  .ct-cell:not(:last-child){border-right:1px solid var(--border);}
+  .ct-label{font-family:var(--mono);font-size:10px;color:var(--text3);display:flex;align-items:center;}
+  .ct-val{font-family:var(--mono);}
+  .ct-val.good{color:var(--accent4);}
+  .ct-val.bad{color:var(--accent3);}
+  .ct-val.warn{color:var(--warning);}
+  .ct-val.neutral{color:var(--text2);}
+  .ct-delta{font-size:9px;display:block;margin-top:2px;}
+  .ct-delta.up{color:var(--accent4);}
+  .ct-delta.down{color:var(--accent3);}
+
+  /* Risk flags */
+  .risk-list{display:flex;flex-direction:column;gap:8px;}
+  .risk-item{display:flex;align-items:flex-start;gap:10px;padding:12px 14px;border-radius:8px;border:1px solid;font-size:12px;}
+  .risk-item.high{background:rgba(255,107,107,0.04);border-color:rgba(255,107,107,0.2);}
+  .risk-item.medium{background:rgba(255,179,71,0.04);border-color:rgba(255,179,71,0.18);}
+  .risk-item.low{background:rgba(0,255,148,0.03);border-color:rgba(0,255,148,0.14);}
+  .risk-item.info{background:rgba(0,229,255,0.03);border-color:rgba(0,229,255,0.12);}
+  .risk-level{font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:2px;flex-shrink:0;margin-top:1px;text-transform:uppercase;letter-spacing:0.5px;}
+  .risk-item.high .risk-level{background:rgba(255,107,107,0.1);color:var(--accent3);}
+  .risk-item.medium .risk-level{background:rgba(255,179,71,0.1);color:var(--warning);}
+  .risk-item.low .risk-level{background:rgba(0,255,148,0.08);color:var(--accent4);}
+  .risk-item.info .risk-level{background:rgba(0,229,255,0.08);color:var(--accent);}
+  .risk-text{color:var(--text2);line-height:1.5;}
+  .risk-text strong{color:var(--text);font-weight:500;}
+
+  /* Cost projection chart */
+  .cost-proj-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .cp-header{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .cp-title{font-size:13px;font-weight:500;}
+  .cp-legend{display:flex;gap:14px;}
+  .cp-leg-item{display:flex;align-items:center;gap:5px;font-family:var(--mono);font-size:9px;color:var(--text2);}
+  .cp-leg-dot{width:8px;height:2px;border-radius:1px;}
+  .cp-body{padding:16px;}
+  .cp-months{display:flex;justify-content:space-between;margin-bottom:6px;font-family:var(--mono);font-size:9px;color:var(--text3);}
+  .cp-bars{display:flex;align-items:flex-end;gap:6px;height:80px;}
+  .cp-bar-group{flex:1;display:flex;gap:2px;align-items:flex-end;}
+  .cp-bar{flex:1;border-radius:2px 2px 0 0;min-height:4px;}
+  .cp-summary{display:flex;justify-content:space-between;margin-top:12px;}
+  .cp-sum-item{font-size:11px;}
+  .cp-sum-label{font-family:var(--mono);font-size:9px;color:var(--text3);margin-bottom:2px;}
+  .cp-sum-val{font-family:var(--mono);font-size:13px;font-weight:500;}
+
+  /* Side-by-side tradeoff */
+  .tradeoff-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .tradeoff-col{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .tradeoff-col.proposed-col{border-color:rgba(0,255,148,0.2);background:rgba(0,255,148,0.03);}
+  .tc-header{display:flex;align-items:center;gap:8px;margin-bottom:4px;}
+  .tc-dot{width:8px;height:8px;border-radius:50%;}
+  .tc-name{font-size:13px;font-weight:500;}
+  .tc-item{display:flex;align-items:flex-start;gap:7px;font-size:11px;color:var(--text2);padding:5px 0;border-bottom:1px solid var(--border);line-height:1.4;}
+  .tc-item:last-child{border-bottom:none;}
+  .tc-icon{flex-shrink:0;font-size:12px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .left>*{animation:fadeUp 0.35s ease forwards;opacity:0;}
+  .left>*:nth-child(1){animation-delay:0.04s;}
+  .left>*:nth-child(2){animation-delay:0.09s;}
+  .left>*:nth-child(3){animation-delay:0.14s;}
+  .left>*:nth-child(4){animation-delay:0.19s;}
+  .right>*{animation:fadeUp 0.35s ease forwards;opacity:0;}
+  .right>*:nth-child(1){animation-delay:0.08s;}
+  .right>*:nth-child(2){animation-delay:0.13s;}
+  .right>*:nth-child(3){animation-delay:0.18s;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="breadcrumb">
+    <span style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:6},'*')">Decision Mode</span><span>/</span>
+    <span style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:6},'*')">Customer Support AI</span><span>/</span>
+    <span class="active">Risk &amp; Tradeoff Analysis</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:7},'*')">← Back to benchmarks</button>
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">Cancel</button>
+    <button class="btn btn-primary" onclick="window.parent.postMessage({type:'navigate',screen:9},'*')">View scorecard →</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="left">
+
+    <!-- Candidate comparison -->
+    <div>
+      <div class="section-label">Comparing top candidates</div>
+      <div class="compare-header">
+        <div class="ch-col"><div class="ch-tag current">Metric</div></div>
+        <div class="ch-col current">
+          <div class="ch-tag current">Current</div>
+          <div class="ch-name">GPT-4o</div>
+          <div class="ch-provider">OpenAI</div>
+        </div>
+        <div class="ch-col proposed">
+          <div class="ch-tag proposed">★ Proposed</div>
+          <div class="ch-name">Claude 3.5 Sonnet</div>
+          <div class="ch-provider">Anthropic</div>
+        </div>
+      </div>
+      <div class="compare-table" style="margin-top:8px;">
+        <div class="ct-row">
+          <div class="ct-cell ct-label">Quality score</div>
+          <div class="ct-cell"><span class="ct-val warn">88/100</span></div>
+          <div class="ct-cell"><span class="ct-val good">94/100 <span class="ct-delta up">▲ +6 pts</span></span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">Hallucination rate</div>
+          <div class="ct-cell"><span class="ct-val bad">3.1%</span></div>
+          <div class="ct-cell"><span class="ct-val good">1.4% <span class="ct-delta up">▼ −55%</span></span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">Cost / 1M tokens</div>
+          <div class="ct-cell"><span class="ct-val bad">$5.00</span></div>
+          <div class="ct-cell"><span class="ct-val good">$3.00 <span class="ct-delta up">▼ −40%</span></span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">P50 latency</div>
+          <div class="ct-cell"><span class="ct-val warn">1.8s</span></div>
+          <div class="ct-cell"><span class="ct-val good">1.2s <span class="ct-delta up">▼ −0.6s</span></span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">SOC 2</div>
+          <div class="ct-cell"><span class="ct-val good">✓ Certified</span></div>
+          <div class="ct-cell"><span class="ct-val good">✓ Certified</span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">Lock-in risk</div>
+          <div class="ct-cell"><span class="ct-val warn">Medium</span></div>
+          <div class="ct-cell"><span class="ct-val warn">Medium <span class="ct-delta" style="color:var(--text3)">— no change</span></span></div>
+        </div>
+        <div class="ct-row">
+          <div class="ct-cell ct-label">Migration effort</div>
+          <div class="ct-cell"><span class="ct-val neutral">Current</span></div>
+          <div class="ct-cell"><span class="ct-val good">Low · 2–3 days</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Risk flags -->
+    <div>
+      <div class="section-label">Risk flags</div>
+      <div class="risk-list">
+        <div class="risk-item medium">
+          <div class="risk-level">Medium</div>
+          <div class="risk-text"><strong>Vendor lock-in — no improvement.</strong> Anthropic uses a different API format to OpenAI. Migration away in future would require prompt re-engineering. ClauseAI will monitor for multi-vendor routing opportunities.</div>
+        </div>
+        <div class="risk-item low">
+          <div class="risk-level">Low</div>
+          <div class="risk-text"><strong>API schema changes.</strong> Anthropic deploys model updates approximately every 90 days. ClauseAI auto-detects version regressions and alerts within minutes of any quality drop.</div>
+        </div>
+        <div class="risk-item info">
+          <div class="risk-level">Info</div>
+          <div class="risk-text"><strong>Prompt migration required.</strong> Your current system prompts are format-agnostic. ClauseAI estimates 2–3 engineering days to migrate and shadow-test before full cutover.</div>
+        </div>
+        <div class="risk-item low">
+          <div class="risk-level">Low</div>
+          <div class="risk-text"><strong>Compliance maintained.</strong> Claude 3.5 Sonnet meets all your required certifications: SOC 2 Type II, PII handling, and HIPAA eligibility. No compliance regression.</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <!-- 12-month cost projection -->
+    <div>
+      <div class="section-label">12-month cost projection</div>
+      <div class="cost-proj-card">
+        <div class="cp-header">
+          <div class="cp-title">Projected spend · Customer Support AI</div>
+          <div class="cp-legend">
+            <div class="cp-leg-item"><div class="cp-leg-dot" style="background:var(--accent2)"></div>GPT-4o (current)</div>
+            <div class="cp-leg-item"><div class="cp-leg-dot" style="background:var(--accent4)"></div>Claude 3.5 (proposed)</div>
+          </div>
+        </div>
+        <div class="cp-body">
+          <div class="cp-months">
+            <span>Now</span><span>Q2</span><span>Q3</span><span>Q4</span><span>+12mo</span>
+          </div>
+          <div class="cp-bars">
+            <!-- Months 1-12, paired bars: GPT-4o (growing) vs Claude (flat-lower) -->
+            <div class="cp-bar-group"><div class="cp-bar" style="height:48px;background:rgba(123,97,255,0.5)"></div><div class="cp-bar" style="height:28px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:50px;background:rgba(123,97,255,0.5)"></div><div class="cp-bar" style="height:29px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:53px;background:rgba(123,97,255,0.5)"></div><div class="cp-bar" style="height:30px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:56px;background:rgba(123,97,255,0.5)"></div><div class="cp-bar" style="height:31px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:59px;background:rgba(123,97,255,0.48)"></div><div class="cp-bar" style="height:32px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:62px;background:rgba(123,97,255,0.45)"></div><div class="cp-bar" style="height:33px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:65px;background:rgba(123,97,255,0.43)"></div><div class="cp-bar" style="height:34px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:68px;background:rgba(123,97,255,0.4)"></div><div class="cp-bar" style="height:35px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:72px;background:rgba(123,97,255,0.38)"></div><div class="cp-bar" style="height:36px;background:rgba(0,255,148,0.5)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:76px;background:rgba(123,97,255,0.35)"></div><div class="cp-bar" style="height:37px;background:rgba(0,255,148,0.48)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:80px;background:rgba(123,97,255,0.32)"></div><div class="cp-bar" style="height:38px;background:rgba(0,255,148,0.46)"></div></div>
+            <div class="cp-bar-group"><div class="cp-bar" style="height:80px;background:rgba(123,97,255,0.3)"></div><div class="cp-bar" style="height:39px;background:rgba(0,255,148,0.44)"></div></div>
+          </div>
+          <div class="cp-summary">
+            <div class="cp-sum-item">
+              <div class="cp-sum-label">GPT-4o · 12mo total</div>
+              <div class="cp-sum-val" style="color:var(--accent3)">$421,200</div>
+            </div>
+            <div class="cp-sum-item">
+              <div class="cp-sum-label">Claude 3.5 · 12mo total</div>
+              <div class="cp-sum-val" style="color:var(--accent4)">$245,600</div>
+            </div>
+            <div class="cp-sum-item">
+              <div class="cp-sum-label">Projected savings</div>
+              <div class="cp-sum-val" style="color:var(--accent4)">$175,600</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Side-by-side tradeoff -->
+    <div>
+      <div class="section-label">Tradeoff summary</div>
+      <div class="tradeoff-grid">
+        <div class="tradeoff-col">
+          <div class="tc-header">
+            <div class="tc-dot" style="background:var(--accent2)"></div>
+            <div class="tc-name">GPT-4o · status quo</div>
+          </div>
+          <div class="tc-item"><div class="tc-icon">✓</div>No migration effort required</div>
+          <div class="tc-item"><div class="tc-icon">✓</div>Team already familiar with API</div>
+          <div class="tc-item"><div class="tc-icon">✗</div>40% higher cost at scale</div>
+          <div class="tc-item"><div class="tc-icon">✗</div>3.1% hallucination rate on pricing queries</div>
+          <div class="tc-item"><div class="tc-icon">✗</div>HIPAA eligibility review needed</div>
+          <div class="tc-item"><div class="tc-icon">⚠</div>Cost trending +24% MoM</div>
+        </div>
+        <div class="tradeoff-col proposed-col">
+          <div class="tc-header">
+            <div class="tc-dot" style="background:var(--accent4)"></div>
+            <div class="tc-name">Claude 3.5 · proposed</div>
+          </div>
+          <div class="tc-item"><div class="tc-icon">✓</div>40% cost reduction · $175k saved over 12mo</div>
+          <div class="tc-item"><div class="tc-icon">✓</div>Lower hallucination rate: 1.4% vs 3.1%</div>
+          <div class="tc-item"><div class="tc-icon">✓</div>Full SOC 2, PII, HIPAA compliance</div>
+          <div class="tc-item"><div class="tc-icon">✓</div>Faster P50 latency: 1.2s vs 1.8s</div>
+          <div class="tc-item"><div class="tc-icon">⚠</div>2–3 days migration effort required</div>
+          <div class="tc-item"><div class="tc-icon">⚠</div>Medium lock-in risk — monitored by ClauseAI</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

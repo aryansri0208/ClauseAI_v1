@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Requirements Intake</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg);position:sticky;top:0;z-index:100;}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;margin-left:16px;}
+  .breadcrumb .active{color:var(--text2);}
+  .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .btn{padding:8px 18px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+  .btn-primary{background:var(--accent);color:#fff;font-weight:600;}
+  .btn-primary:hover{background:#3a4a62;}
+
+  .page{display:grid;grid-template-columns:320px 1fr;min-height:calc(100vh - 52px);}
+
+  /* SIDEBAR */
+  .sidebar{border-right:1px solid var(--border);padding:28px 22px;display:flex;flex-direction:column;gap:24px;}
+  .sidebar-title{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-0.4px;line-height:1.2;}
+  .sidebar-sub{font-size:12px;color:var(--text2);font-weight:300;line-height:1.6;margin-top:6px;}
+
+  .context-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;}
+  .ctx-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+  .ctx-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .ctx-row:last-child{border-bottom:none;}
+  .ctx-key{color:var(--text3);font-family:var(--mono);}
+  .ctx-val{color:var(--text2);font-family:var(--mono);}
+  .ctx-val.inferred{color:var(--accent2);background:rgba(123,97,255,0.08);border:1px solid rgba(123,97,255,0.2);padding:1px 6px;border-radius:3px;}
+
+  .mode-explainer{background:rgba(0,229,255,0.04);border:1px solid rgba(0,229,255,0.12);border-radius:8px;padding:14px;}
+  .me-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--accent);margin-bottom:6px;}
+  .me-text{font-size:11px;color:var(--text2);line-height:1.6;font-weight:300;}
+
+  .sidebar-actions{margin-top:auto;display:flex;flex-direction:column;gap:8px;}
+
+  /* MAIN */
+  .main{padding:32px 40px;display:flex;flex-direction:column;gap:28px;overflow-y:auto;}
+
+  .section-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:14px;}
+
+  /* Field groups */
+  .fields-group{display:flex;flex-direction:column;gap:16px;}
+  .field-row{display:grid;gap:14px;}
+  .field-row.cols2{grid-template-columns:1fr 1fr;}
+  .field-row.cols3{grid-template-columns:1fr 1fr 1fr;}
+
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);display:flex;align-items:center;gap:6px;}
+  .field-inferred-tag{font-size:8px;padding:1px 5px;border-radius:2px;background:rgba(123,97,255,0.08);border:1px solid rgba(123,97,255,0.2);color:var(--accent2);text-transform:none;letter-spacing:0;}
+  .field-input{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--text);font-family:var(--body);outline:none;transition:border-color 0.15s;}
+  .field-input:focus{border-color:var(--accent);}
+  .field-input.inferred{border-color:rgba(123,97,255,0.25);background:rgba(123,97,255,0.04);}
+  .field-select{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 14px;font-size:13px;color:var(--text2);font-family:var(--body);outline:none;appearance:none;cursor:pointer;transition:border-color 0.15s;}
+  .field-select.inferred{border-color:rgba(123,97,255,0.25);background:rgba(123,97,255,0.04);color:var(--text);}
+  .field-hint{font-size:11px;color:var(--text3);font-family:var(--mono);}
+
+  /* Slider field */
+  .slider-field{display:flex;flex-direction:column;gap:8px;}
+  .slider-header{display:flex;justify-content:space-between;align-items:center;}
+  .slider-val{font-family:var(--mono);font-size:13px;color:var(--accent);}
+  input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:2px;background:var(--border);outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);}
+  .slider-labels{display:flex;justify-content:space-between;font-family:var(--mono);font-size:9px;color:var(--text3);}
+
+  /* Toggle chips for use case */
+  .chip-group{display:flex;flex-wrap:wrap;gap:7px;}
+  .chip{padding:6px 12px;border-radius:5px;font-size:12px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;transition:all 0.12s;font-family:var(--mono);}
+  .chip:hover{border-color:var(--border2);color:var(--text2);}
+  .chip.active{border-color:rgba(0,229,255,0.3);background:rgba(0,229,255,0.06);color:var(--accent);}
+
+  /* Compliance multi-select */
+  .comp-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;}
+  .comp-chip{padding:8px 10px;border-radius:6px;font-family:var(--mono);font-size:10px;border:1px solid var(--border);background:var(--surface2);color:var(--text3);cursor:pointer;text-align:center;transition:all 0.12s;}
+  .comp-chip:hover{border-color:var(--border2);color:var(--text2);}
+  .comp-chip.active{border-color:rgba(0,255,148,0.25);background:rgba(0,255,148,0.06);color:var(--accent4);}
+  .comp-chip.inferred-active{border-color:rgba(123,97,255,0.25);background:rgba(123,97,255,0.06);color:var(--accent2);}
+
+  /* Section divider */
+  .divider{height:1px;background:var(--border);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .main>*{animation:fadeUp 0.35s ease forwards;opacity:0;}
+  .main>*:nth-child(1){animation-delay:0.04s;}
+  .main>*:nth-child(2){animation-delay:0.08s;}
+  .main>*:nth-child(3){animation-delay:0.12s;}
+  .main>*:nth-child(4){animation-delay:0.16s;}
+  .main>*:nth-child(5){animation-delay:0.2s;}
+  .main>*:nth-child(6){animation-delay:0.24s;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="breadcrumb">
+    <span>Decision Mode</span><span>/</span>
+    <span class="active">Requirements Intake</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">← Back to dashboard</button>
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">Cancel</button>
+    <button class="btn btn-primary" onclick="window.parent.postMessage({type:'navigate',screen:7},'*')">Run evaluation →</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div>
+      <div class="sidebar-title">Define your evaluation requirements</div>
+      <div class="sidebar-sub">Tell ClauseAI what you need from a vendor. We'll pre-fill what we already know from your infrastructure data — just review and correct.</div>
+    </div>
+
+    <div class="context-card">
+      <div class="ctx-label">Pre-filled from your data</div>
+      <div class="ctx-row"><span class="ctx-key">Pipeline</span><span class="ctx-val">Customer Support AI</span></div>
+      <div class="ctx-row"><span class="ctx-key">Current vendor</span><span class="ctx-val">OpenAI / GPT-4o</span></div>
+      <div class="ctx-row"><span class="ctx-key">Avg daily tokens</span><span class="ctx-val inferred">~2.4M</span></div>
+      <div class="ctx-row"><span class="ctx-key">Current spend</span><span class="ctx-val inferred">$32,100/mo</span></div>
+      <div class="ctx-row"><span class="ctx-key">P50 latency</span><span class="ctx-val inferred">1.8s</span></div>
+    </div>
+
+    <div class="mode-explainer">
+      <div class="me-title">How Decision Mode works</div>
+      <div class="me-text">ClauseAI will replay your real production traffic against every candidate model and measure quality, cost, latency, and compliance — then generate a ranked scorecard with a structured recommendation.</div>
+    </div>
+
+    <div class="sidebar-actions">
+      <button class="btn btn-primary" style="padding:12px;" onclick="window.parent.postMessage({type:'navigate',screen:7},'*')">Run evaluation →</button>
+      <button class="btn btn-ghost" style="padding:10px; font-size:12px;">Save draft</button>
+    </div>
+  </aside>
+
+  <!-- MAIN FORM -->
+  <main class="main">
+
+    <!-- Use case -->
+    <div>
+      <div class="section-label">What are you evaluating for?</div>
+      <div class="chip-group">
+        <div class="chip active">Customer support</div>
+        <div class="chip">Internal copilot</div>
+        <div class="chip">Summarisation</div>
+        <div class="chip">Code generation</div>
+        <div class="chip">Document intelligence</div>
+        <div class="chip">RAG / search</div>
+        <div class="chip">Data extraction</div>
+        <div class="chip">Other</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Volume + budget -->
+    <div>
+      <div class="section-label">Volume &amp; budget constraints</div>
+      <div class="fields-group">
+        <div class="field-row cols3">
+          <div class="field">
+            <div class="field-label">Daily token volume <span class="field-inferred-tag">inferred</span></div>
+            <input class="field-input inferred" type="text" value="~2.4M tokens / day">
+            <div class="field-hint">Based on last 30 days of traffic</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Monthly budget cap</div>
+            <input class="field-input" type="text" placeholder="e.g. $25,000" value="$28,000">
+          </div>
+          <div class="field">
+            <div class="field-label">Cost priority</div>
+            <select class="field-select">
+              <option>Balance cost + quality</option>
+              <option>Minimise cost</option>
+              <option>Maximise quality</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Latency -->
+    <div>
+      <div class="section-label">Latency requirements</div>
+      <div class="fields-group">
+        <div class="slider-field">
+          <div class="slider-header">
+            <div class="field-label">Max acceptable P50 latency <span class="field-inferred-tag">inferred</span></div>
+            <div class="slider-val">2.0s</div>
+          </div>
+          <input type="range" min="0" max="10" value="4">
+          <div class="slider-labels"><span>0.5s (real-time)</span><span>2s (interactive)</span><span>5s+ (async OK)</span></div>
+        </div>
+        <div class="field-row cols2">
+          <div class="field">
+            <div class="field-label">Latency sensitivity</div>
+            <select class="field-select inferred">
+              <option>High — user-facing, synchronous</option>
+              <option>Medium — some buffering OK</option>
+              <option>Low — async / batch</option>
+            </select>
+          </div>
+          <div class="field">
+            <div class="field-label">Streaming required?</div>
+            <select class="field-select">
+              <option>Yes — token streaming required</option>
+              <option>No — batch response OK</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Compliance -->
+    <div>
+      <div class="section-label">Compliance requirements <span class="field-inferred-tag" style="font-family:var(--mono);font-size:9px;padding:2px 6px;border-radius:3px;background:rgba(123,97,255,0.08);border:1px solid rgba(123,97,255,0.2);color:var(--accent2);vertical-align:middle;">pre-filled from your profile</span></div>
+      <div class="comp-grid">
+        <div class="comp-chip inferred-active">SOC 2 Type II</div>
+        <div class="comp-chip inferred-active">PII handling</div>
+        <div class="comp-chip active">HIPAA</div>
+        <div class="comp-chip">GDPR</div>
+        <div class="comp-chip">ISO 27001</div>
+        <div class="comp-chip">FedRAMP</div>
+        <div class="comp-chip">CCPA</div>
+        <div class="comp-chip">None</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- Scale + data sensitivity -->
+    <div>
+      <div class="section-label">Scale &amp; data sensitivity</div>
+      <div class="fields-group">
+        <div class="field-row cols2">
+          <div class="field">
+            <div class="field-label">Expected scale in 12 months <span class="field-inferred-tag">inferred</span></div>
+            <select class="field-select inferred">
+              <option>3–5× current volume</option>
+              <option>Same as today</option>
+              <option>2× current</option>
+              <option>5–10× current</option>
+            </select>
+            <div class="field-hint">Based on MoM growth trend</div>
+          </div>
+          <div class="field">
+            <div class="field-label">Data sensitivity</div>
+            <select class="field-select">
+              <option>High — customer PII in prompts</option>
+              <option>Medium — anonymised data</option>
+              <option>Low — no sensitive data</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <div class="field-label">Additional context for evaluation</div>
+          <input class="field-input" type="text" placeholder="e.g. Must support function calling, need JSON mode, multilingual support required…">
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</body>
+</html>

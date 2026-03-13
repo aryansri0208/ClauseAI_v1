@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Stakeholder Action</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);gap:16px;background:var(--bg);}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;margin-left:8px;}
+  .breadcrumb .active{color:var(--text2);}
+  .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+  .urgency-pill{display:flex;align-items:center;gap:6px;background:rgba(255,179,71,0.08);border:1px solid rgba(255,179,71,0.22);border-radius:20px;padding:4px 12px;font-family:var(--mono);font-size:10px;color:var(--warning);}
+
+  /* PAGE */
+  .page{display:grid;grid-template-columns:1fr 380px;min-height:calc(100vh - 52px);}
+
+  /* LEFT — proposal */
+  .left{padding:36px 40px;display:flex;flex-direction:column;gap:24px;overflow-y:auto;}
+
+  .proposal-header{display:flex;flex-direction:column;gap:8px;}
+  .proposal-eyebrow{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);}
+  .proposal-title{font-family:var(--display);font-weight:800;font-size:24px;letter-spacing:-0.7px;line-height:1.15;}
+  .proposal-meta{display:flex;gap:12px;flex-wrap:wrap;}
+  .meta-chip{display:flex;align-items:center;gap:5px;padding:3px 10px;border-radius:4px;font-family:var(--mono);font-size:10px;background:var(--surface);border:1px solid var(--border);color:var(--text3);}
+  .meta-chip.highlight{background:rgba(0,229,255,0.06);border-color:rgba(0,229,255,0.18);color:var(--accent);}
+
+  /* Summary card */
+  .summary-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;}
+  .sc-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;}
+  .sc-text{font-size:13px;color:var(--text2);line-height:1.7;font-weight:300;}
+  .sc-text strong{color:var(--text);font-weight:500;}
+
+  /* Evidence */
+  .evidence-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+  .ev-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .ev-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.8px;color:var(--text3);margin-bottom:6px;}
+  .ev-val{font-family:var(--display);font-size:20px;font-weight:700;letter-spacing:-0.5px;margin-bottom:2px;}
+  .ev-sub{font-size:11px;color:var(--text3);line-height:1.4;}
+
+  /* Memo preview */
+  .memo-preview{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .memo-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .memo-title-row{display:flex;align-items:center;gap:8px;}
+  .memo-icon{font-size:14px;}
+  .memo-name{font-size:12px;font-weight:500;}
+  .memo-generated{font-family:var(--mono);font-size:9px;color:var(--text3);}
+  .memo-download{padding:4px 10px;border-radius:4px;font-size:10px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text3);font-family:var(--mono);transition:all 0.15s;}
+  .memo-download:hover{color:var(--accent);border-color:rgba(0,229,255,0.25);}
+  .memo-body{padding:16px;font-size:12px;color:var(--text2);line-height:1.75;font-weight:300;}
+  .memo-body p{margin-bottom:8px;}
+  .memo-body p:last-child{margin-bottom:0;}
+  .memo-body strong{color:var(--text);font-weight:500;}
+
+  /* Audit trail */
+  .audit-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .audit-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;}
+  .audit-rows{display:flex;flex-direction:column;gap:0;}
+  .audit-row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .audit-row:last-child{border-bottom:none;}
+  .audit-timeline{display:flex;flex-direction:column;align-items:center;gap:0;flex-shrink:0;}
+  .audit-dot{width:7px;height:7px;border-radius:50%;margin-top:3px;}
+  .audit-line{width:1px;flex:1;background:var(--border);min-height:16px;margin-top:2px;}
+  .audit-row:last-child .audit-line{display:none;}
+  .audit-content{flex:1;}
+  .audit-action{color:var(--text2);line-height:1.4;}
+  .audit-action strong{color:var(--text);font-weight:500;}
+  .audit-time{font-family:var(--mono);font-size:9px;color:var(--text3);margin-top:2px;}
+
+  /* RIGHT — action panel */
+  .right{border-left:1px solid var(--border);padding:28px 24px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;}
+
+  .action-panel-title{font-family:var(--display);font-weight:700;font-size:16px;letter-spacing:-0.3px;}
+  .action-panel-sub{font-size:12px;color:var(--text2);margin-top:4px;line-height:1.5;font-weight:300;}
+
+  /* CTA block */
+  .cta-block{display:flex;flex-direction:column;gap:10px;}
+  .approve-btn{padding:15px;border-radius:8px;background:var(--accent4);color:#fff;font-weight:600;font-size:14px;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;text-align:center;display:flex;align-items:center;justify-content:center;gap:8px;}
+  .approve-btn:hover{background:#5bc78a;}
+  .approve-sub{font-size:11px;color:rgba(0,0,0,0.6);font-weight:400;}
+
+  .delegate-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .delegate-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:10px;}
+  .delegate-options{display:flex;flex-direction:column;gap:6px;}
+  .delegate-row{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface2);cursor:pointer;transition:all 0.12s;}
+  .delegate-row:hover{border-color:var(--border2);background:rgba(255,255,255,0.02);}
+  .delegate-avatar{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:600;flex-shrink:0;}
+  .delegate-info{flex:1;}
+  .delegate-name{font-size:11px;font-weight:500;}
+  .delegate-role{font-family:var(--mono);font-size:9px;color:var(--text3);}
+  .delegate-arrow{font-size:10px;color:var(--text3);}
+
+  .reject-block{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;}
+  .reject-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);margin-bottom:8px;}
+  .reject-textarea{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:10px;font-size:12px;color:var(--text2);font-family:var(--body);resize:none;height:64px;outline:none;transition:border-color 0.15s;}
+  .reject-textarea:focus{border-color:var(--border2);}
+  .reject-textarea::placeholder{color:var(--text3);}
+  .reject-btn{margin-top:8px;width:100%;padding:9px;border-radius:6px;font-size:12px;cursor:pointer;border:1px solid rgba(255,107,107,0.22);background:rgba(255,107,107,0.06);color:var(--accent3);font-family:var(--body);transition:all 0.15s;}
+  .reject-btn:hover{background:rgba(255,107,107,0.1);}
+
+  /* Impact summary */
+  .impact-card{background:rgba(0,255,148,0.04);border:1px solid rgba(0,255,148,0.16);border-radius:8px;padding:14px;}
+  .impact-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--accent4);margin-bottom:10px;}
+  .impact-rows{display:flex;flex-direction:column;gap:6px;}
+  .impact-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid rgba(0,255,148,0.08);}
+  .impact-row:last-child{border-bottom:none;}
+  .impact-label{color:var(--text3);font-family:var(--mono);}
+  .impact-val{font-family:var(--mono);color:var(--accent4);}
+
+  .audit-note-box{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:var(--mono);font-size:10px;color:var(--text3);line-height:1.6;text-align:center;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .left>*{animation:fadeUp 0.4s ease forwards;opacity:0;}
+  .left>*:nth-child(1){animation-delay:0.04s;}
+  .left>*:nth-child(2){animation-delay:0.1s;}
+  .left>*:nth-child(3){animation-delay:0.16s;}
+  .left>*:nth-child(4){animation-delay:0.22s;}
+  .left>*:nth-child(5){animation-delay:0.28s;}
+  .right>*{animation:fadeUp 0.4s ease forwards;opacity:0;}
+  .right>*:nth-child(1){animation-delay:0.08s;}
+  .right>*:nth-child(2){animation-delay:0.14s;}
+  .right>*:nth-child(3){animation-delay:0.2s;}
+  .right>*:nth-child(4){animation-delay:0.26s;}
+  .right>*:nth-child(5){animation-delay:0.32s;}
+  .right>*:nth-child(6){animation-delay:0.38s;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="breadcrumb">
+    <span>Management Mode</span><span>/</span>
+    <span>Stakeholder Actions</span><span>/</span>
+    <span class="active">Vendor adoption · Claude 3.5 Sonnet</span>
+  </div>
+  <div class="topbar-right">
+    <div class="urgency-pill">⏱ Action requested · 2 hrs ago</div>
+    <button class="btn btn-ghost">↓ Download memo</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="left">
+
+    <!-- Proposal header -->
+    <div class="proposal-header">
+      <div class="proposal-eyebrow">ClauseAI · stakeholder action required</div>
+      <div class="proposal-title">Adopt Claude 3.5 Sonnet for<br>Customer Support AI</div>
+      <div class="proposal-meta">
+        <div class="meta-chip highlight">Decision Mode · completed</div>
+        <div class="meta-chip">Requested by ClauseAI · 2 hrs ago</div>
+        <div class="meta-chip">Scorecard score: 89 / 100</div>
+        <div class="meta-chip">Est. savings: $12,900/mo</div>
+      </div>
+    </div>
+
+    <!-- Summary -->
+    <div class="summary-card">
+      <div class="sc-title">Summary</div>
+      <div class="sc-text">
+        ClauseAI completed a <strong>14-day production evaluation</strong> of 6 models against your Customer Support AI workload. Claude 3.5 Sonnet scored <strong>94/100 on quality</strong> — the highest of any evaluated model — at <strong>40% lower cost than your current GPT-4o deployment</strong>. Hallucination rate is 1.4% vs GPT-4o's 3.1%. Migration complexity is rated low: an estimated <strong>2–3 days of engineering time</strong> with no downtime required. Compliance review passed for SOC 2, PII handling, and HIPAA eligibility.
+      </div>
+    </div>
+
+    <!-- Evidence grid -->
+    <div>
+      <div style="font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;">Supporting evidence</div>
+      <div class="evidence-grid">
+        <div class="ev-card">
+          <div class="ev-label">Quality score</div>
+          <div class="ev-val" style="color:var(--accent4)">94/100</div>
+          <div class="ev-sub">Highest of 6 evaluated models on your workload</div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-label">Monthly savings</div>
+          <div class="ev-val" style="color:var(--accent4)">$12.9k</div>
+          <div class="ev-sub">vs. current GPT-4o deployment cost</div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-label">Hallucination rate</div>
+          <div class="ev-val" style="color:var(--accent4)">1.4%</div>
+          <div class="ev-sub">vs. 3.1% on GPT-4o · measured on real queries</div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-label">Migration effort</div>
+          <div class="ev-val" style="color:var(--accent)">Low</div>
+          <div class="ev-sub">Est. 2–3 eng. days · zero downtime path</div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-label">Compliance</div>
+          <div class="ev-val" style="color:var(--accent4)">Pass ✓</div>
+          <div class="ev-sub">SOC 2, PII, HIPAA eligibility confirmed</div>
+        </div>
+        <div class="ev-card">
+          <div class="ev-label">Latency P50</div>
+          <div class="ev-val" style="color:var(--accent4)">1.2s</div>
+          <div class="ev-sub">vs. 1.8s on GPT-4o · within SLA threshold</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Auto-generated memo -->
+    <div class="memo-preview">
+      <div class="memo-header">
+        <div class="memo-title-row">
+          <div class="memo-icon">📄</div>
+          <div class="memo-name">Decision memo · Claude 3.5 Sonnet adoption · Customer Support AI</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="memo-generated">Auto-generated by ClauseAI</div>
+          <button class="memo-download">↓ PDF</button>
+        </div>
+      </div>
+      <div class="memo-body">
+        <p><strong>Recommendation:</strong> Adopt Claude 3.5 Sonnet (Anthropic) as the primary model for the Customer Support AI pipeline, replacing the current GPT-4o deployment.</p>
+        <p><strong>Basis:</strong> Following a 14-day evaluation on 2.4M tokens/day of live production traffic, Claude 3.5 Sonnet achieved a quality score of 94/100 — 6 points above GPT-4o — with a hallucination rate of 1.4% vs 3.1%. Estimated monthly cost savings of $12,900 at equivalent or better output quality.</p>
+        <p><strong>Risk:</strong> Moderate vendor lock-in risk due to API format differences. ClauseAI will monitor for switching opportunities post-adoption and alert if competitive parity is restored.</p>
+        <p><strong>Action required:</strong> CTO approval to proceed. Engineering team (Platform Eng) to execute migration over 2–3 days. ClauseAI will monitor quality and cost metrics for 30 days post-migration and flag any regression.</p>
+      </div>
+    </div>
+
+    <!-- Audit trail -->
+    <div class="audit-section">
+      <div class="audit-title">Audit trail · this proposal</div>
+      <div class="audit-rows">
+        <div class="audit-row">
+          <div class="audit-timeline"><div class="audit-dot" style="background:var(--accent2)"></div><div class="audit-line"></div></div>
+          <div class="audit-content">
+            <div class="audit-action"><strong>Evaluation initiated</strong> by ClauseAI · Requirements intake completed by A. Kim (CTO)</div>
+            <div class="audit-time">Mar 1, 2025 · 09:14 UTC</div>
+          </div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-timeline"><div class="audit-dot" style="background:var(--accent2)"></div><div class="audit-line"></div></div>
+          <div class="audit-content">
+            <div class="audit-action"><strong>Benchmarking completed</strong> · 6 models evaluated on 14 days of production traffic</div>
+            <div class="audit-time">Mar 8, 2025 · 11:30 UTC</div>
+          </div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-timeline"><div class="audit-dot" style="background:var(--accent2)"></div><div class="audit-line"></div></div>
+          <div class="audit-content">
+            <div class="audit-action"><strong>Vendor scorecard generated</strong> · Claude 3.5 Sonnet scored 89/100 overall · memo auto-drafted</div>
+            <div class="audit-time">Mar 8, 2025 · 11:32 UTC</div>
+          </div>
+        </div>
+        <div class="audit-row">
+          <div class="audit-timeline"><div class="audit-dot" style="background:var(--warning)"></div><div class="audit-line"></div></div>
+          <div class="audit-content">
+            <div class="audit-action"><strong>Stakeholder action requested</strong> · CTO approval pending</div>
+            <div class="audit-time">Mar 8, 2025 · 11:33 UTC · <span style="color:var(--warning)">awaiting approval</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT — Action panel -->
+  <div class="right">
+
+    <div>
+      <div class="action-panel-title">Your decision</div>
+      <div class="action-panel-sub">Approving will authorise the Platform Eng team to proceed with migration. A decision memo will be logged to the audit trail.</div>
+    </div>
+
+    <!-- Approve -->
+    <div class="cta-block">
+      <button class="approve-btn" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">
+        <span>✓ Approve adoption</span>
+      </button>
+    </div>
+
+    <!-- Impact of approving -->
+    <div class="impact-card">
+      <div class="impact-title">If approved · projected impact</div>
+      <div class="impact-rows">
+        <div class="impact-row"><span class="impact-label">Monthly savings</span><span class="impact-val">−$12,900</span></div>
+        <div class="impact-row"><span class="impact-label">Hallucination rate</span><span class="impact-val">−55%</span></div>
+        <div class="impact-row"><span class="impact-label">Latency P50</span><span class="impact-val">−0.6s</span></div>
+        <div class="impact-row"><span class="impact-label">Migration time</span><span class="impact-val">2–3 days</span></div>
+        <div class="impact-row"><span class="impact-label">Downtime</span><span class="impact-val">Zero</span></div>
+      </div>
+    </div>
+
+    <!-- Delegate -->
+    <div class="delegate-block">
+      <div class="delegate-label">Delegate to</div>
+      <div class="delegate-options">
+        <div class="delegate-row" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">
+          <div class="delegate-avatar" style="background:rgba(0,229,255,0.15);color:var(--accent)">SR</div>
+          <div class="delegate-info">
+            <div class="delegate-name">Sam Rivera</div>
+            <div class="delegate-role">VP Engineering</div>
+          </div>
+          <div class="delegate-arrow">→</div>
+        </div>
+        <div class="delegate-row" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">
+          <div class="delegate-avatar" style="background:rgba(123,97,255,0.15);color:var(--accent2)">MJ</div>
+          <div class="delegate-info">
+            <div class="delegate-name">Maya Johnson</div>
+            <div class="delegate-role">Head of Platform Eng</div>
+          </div>
+          <div class="delegate-arrow">→</div>
+        </div>
+        <div class="delegate-row" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">
+          <div class="delegate-avatar" style="background:rgba(255,179,71,0.15);color:var(--warning)">TC</div>
+          <div class="delegate-info">
+            <div class="delegate-name">Tom Chen</div>
+            <div class="delegate-role">ML Engineering Lead</div>
+          </div>
+          <div class="delegate-arrow">→</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Reject -->
+    <div class="reject-block">
+      <div class="reject-label">Reject · add rationale</div>
+      <textarea class="reject-textarea" placeholder="Explain why this adoption is being rejected. This will be logged to the audit trail and shared with the engineering team…"></textarea>
+      <button class="reject-btn">✕ Reject proposal</button>
+    </div>
+
+    <!-- Audit note -->
+    <div class="audit-note-box">Every decision — approve, delegate, or reject —<br>is permanently logged to the audit trail<br>and included in the auto-generated memo.</div>
+
+  </div>
+</div>
+
+</body>
+</html>

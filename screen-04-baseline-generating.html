@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Building Baseline</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;display:flex;flex-direction:column;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .step-track{display:flex;align-items:center;margin-left:28px;}
+  .step{display:flex;align-items:center;gap:7px;font-size:11px;font-family:var(--mono);color:var(--text3);padding:0 12px;}
+  .step.done{color:var(--accent4);}
+  .step.active{color:var(--text);}
+  .step-num{width:18px;height:18px;border-radius:50%;border:1px solid currentColor;display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0;}
+  .step.done .step-num{background:var(--accent4);border-color:var(--accent4);color:#fff;}
+  .step.active .step-num{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .step-div{width:20px;height:1px;background:var(--border2);}
+
+  /* MAIN */
+  .page{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:48px 32px;gap:40px;}
+
+  .page-header{text-align:center;}
+  .eyebrow{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:2px;color:var(--accent);display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:16px;}
+  .spin{display:inline-block;animation:spin 1.5s linear infinite;}
+  @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+  .page-title{font-family:var(--display);font-weight:800;font-size:34px;letter-spacing:-1px;line-height:1.1;}
+  .page-sub{font-size:14px;color:var(--text2);font-weight:300;line-height:1.6;margin-top:12px;max-width:480px;margin-left:auto;margin-right:auto;}
+
+  /* Overall progress bar */
+  .overall-progress{width:100%;max-width:600px;}
+  .op-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;}
+  .op-label{font-family:var(--mono);font-size:10px;color:var(--text2);}
+  .op-pct{font-family:var(--mono);font-size:12px;font-weight:500;color:var(--accent);}
+  .op-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .op-fill{height:100%;background:linear-gradient(90deg,var(--accent2),var(--accent));border-radius:2px;animation:fillprogress 3s ease forwards;}
+  @keyframes fillprogress{0%{width:0%}100%{width:74%}}
+
+  /* Baseline modules grid */
+  .modules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;width:100%;max-width:860px;}
+  .module-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;position:relative;overflow:hidden;}
+  .module-card::before{content:'';position:absolute;bottom:0;left:0;height:2px;border-radius:0;}
+  .module-card.complete::before{width:100%;}
+  .module-card.running::before{animation:modprogress 2s ease infinite;}
+  .module-card.queued::before{width:0%;}
+  .module-card.complete::before{background:var(--accent4);}
+  .module-card.running::before{background:var(--accent);}
+  @keyframes modprogress{0%{width:5%}50%{width:60%}100%{width:85%}}
+
+  .mod-status-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .mod-icon{font-size:18px;}
+  .mod-status-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;}
+  .mod-status-badge.complete{background:rgba(0,255,148,0.08);border:1px solid rgba(0,255,148,0.2);color:var(--accent4);}
+  .mod-status-badge.running{background:rgba(0,229,255,0.08);border:1px solid rgba(0,229,255,0.2);color:var(--accent);}
+  .mod-status-badge.queued{background:var(--surface2);border:1px solid var(--border);color:var(--text3);}
+  .mod-name{font-size:13px;font-weight:500;margin-bottom:4px;}
+  .mod-desc{font-size:11px;color:var(--text3);line-height:1.4;font-family:var(--mono);}
+  .mod-result{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);font-family:var(--mono);font-size:10px;}
+  .mod-result.complete{color:var(--accent4);}
+  .mod-result.running{color:var(--accent);}
+  .mod-result.queued{color:var(--text3);}
+  .blink{animation:blink 1s step-end infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+
+  /* What's happening */
+  .status-strip{display:flex;align-items:center;gap:16px;padding:12px 20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;width:100%;max-width:860px;}
+  .status-text{font-family:var(--mono);font-size:11px;color:var(--text2);flex:1;}
+  .status-text .highlight{color:var(--accent);}
+  .eta-text{font-family:var(--mono);font-size:10px;color:var(--text3);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .page-header{animation:fadeUp 0.5s ease forwards;}
+  .overall-progress{animation:fadeUp 0.5s 0.06s ease forwards;opacity:0;}
+  .modules-grid{animation:fadeUp 0.5s 0.12s ease forwards;opacity:0;}
+  .status-strip{animation:fadeUp 0.5s 0.18s ease forwards;opacity:0;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="step-track">
+    <div class="step done"><div class="step-num">✓</div>Connect</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Scan</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Confirm</div>
+    <div class="step-div"></div>
+    <div class="step active"><div class="step-num">4</div>Baseline</div>
+    <div class="step-div"></div>
+    <div class="step"><div class="step-num">5</div>Insights</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="page-header">
+    <div class="eyebrow"><span class="spin">⟳</span> Building your baseline</div>
+    <div class="page-title">ClauseAI is analysing<br>14 systems across 4 vendors</div>
+    <div class="page-sub">We're building a complete performance, cost, and risk baseline for your AI infrastructure. This runs once and takes about 90 seconds. You'll see your first insights immediately after.</div>
+  </div>
+
+  <div class="overall-progress">
+    <div class="op-top">
+      <div class="op-label">Overall progress</div>
+      <div class="op-pct">74%<span class="blink">_</span></div>
+    </div>
+    <div class="op-track"><div class="op-fill"></div></div>
+  </div>
+
+  <div class="modules-grid">
+
+    <div class="module-card complete">
+      <div class="mod-status-row">
+        <div class="mod-icon">💰</div>
+        <div class="mod-status-badge complete">Complete ✓</div>
+      </div>
+      <div class="mod-name">Cost baseline</div>
+      <div class="mod-desc">Token spend per system · MoM trends · budget forecasts</div>
+      <div class="mod-result complete">$84,200/mo · 2 anomalies found</div>
+    </div>
+
+    <div class="module-card complete">
+      <div class="mod-status-row">
+        <div class="mod-icon">⚡</div>
+        <div class="mod-status-badge complete">Complete ✓</div>
+      </div>
+      <div class="mod-name">Quality baseline</div>
+      <div class="mod-desc">Output quality scores · hallucination rates per model</div>
+      <div class="mod-result complete">Avg 91.4% quality · 2.1% hallucination</div>
+    </div>
+
+    <div class="module-card complete">
+      <div class="mod-status-row">
+        <div class="mod-icon">🗂</div>
+        <div class="mod-status-badge complete">Complete ✓</div>
+      </div>
+      <div class="mod-name">Team ownership map</div>
+      <div class="mod-desc">Systems mapped to teams · ownership confirmed</div>
+      <div class="mod-result complete">3 teams · 14 systems mapped</div>
+    </div>
+
+    <div class="module-card running">
+      <div class="mod-status-row">
+        <div class="mod-icon">🛡</div>
+        <div class="mod-status-badge running">Running…</div>
+      </div>
+      <div class="mod-name">Compliance gap scan</div>
+      <div class="mod-desc">SOC 2, HIPAA, GDPR · PII exposure · injection risk</div>
+      <div class="mod-result running">Scanning 14 systems<span class="blink">_</span></div>
+    </div>
+
+    <div class="module-card running">
+      <div class="mod-status-row">
+        <div class="mod-icon">🔗</div>
+        <div class="mod-status-badge running">Running…</div>
+      </div>
+      <div class="mod-name">Vendor risk map</div>
+      <div class="mod-desc">Lock-in exposure · concentration risk · SLA analysis</div>
+      <div class="mod-result running">Analysing vendor dependencies<span class="blink">_</span></div>
+    </div>
+
+    <div class="module-card queued">
+      <div class="mod-status-row">
+        <div class="mod-icon">📈</div>
+        <div class="mod-status-badge queued">Queued</div>
+      </div>
+      <div class="mod-name">Optimisation scan</div>
+      <div class="mod-desc">Routing opportunities · caching · prompt efficiency</div>
+      <div class="mod-result queued">Waiting for compliance scan…</div>
+    </div>
+
+  </div>
+
+  <div class="status-strip" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:4},'*')" title="Skip to first insights">
+    <span class="spin" style="color:var(--accent);font-size:14px;">⟳</span>
+    <div class="status-text">Currently running: <span class="highlight">compliance gap scan</span> · checking injection guard status on Internal Copilot pipeline<span class="blink">_</span></div>
+    <div class="eta-text">Est. ~30 seconds remaining · <u>Skip to insights</u></div>
+  </div>
+
+</div>
+</body>
+</html>

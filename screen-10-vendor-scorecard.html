@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Vendor Scorecard</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);gap:16px;}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;margin-left:16px;}
+  .breadcrumb .active{color:var(--text2);}
+  .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .btn{padding:7px 16px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+  .btn-primary{background:var(--accent);color:#fff;font-weight:600;}
+  .btn-danger{background:rgba(255,107,107,0.1);color:var(--accent3);border:1px solid rgba(255,107,107,0.25);}
+
+  .layout{display:grid;grid-template-columns:1fr 360px;min-height:calc(100vh - 52px);}
+
+  /* LEFT */
+  .left{padding:32px 36px;display:flex;flex-direction:column;gap:28px;overflow-y:auto;}
+
+  .rec-block{background:rgba(0,255,148,0.04);border:1px solid rgba(0,255,148,0.18);border-radius:12px;padding:24px;}
+  .rec-eyebrow{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--accent4);margin-bottom:10px;}
+  .rec-headline{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:-0.8px;line-height:1.1;margin-bottom:10px;}
+  .rec-sub{font-size:13px;color:var(--text2);font-weight:300;line-height:1.6;}
+  .rec-meta{display:flex;gap:16px;margin-top:16px;flex-wrap:wrap;}
+  .rec-chip{display:flex;align-items:center;gap:6px;background:rgba(0,255,148,0.06);border:1px solid rgba(0,255,148,0.15);border-radius:5px;padding:4px 10px;font-family:var(--mono);font-size:10px;color:var(--accent4);}
+
+  /* Score dimensions */
+  .scores-section{}
+  .scores-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:14px;}
+  .score-rows{display:flex;flex-direction:column;gap:10px;}
+  .score-row{display:grid;grid-template-columns:140px 1fr 56px;gap:14px;align-items:center;}
+  .score-label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:7px;}
+  .score-icon{font-size:13px;}
+  .bar-track{height:6px;background:var(--border);border-radius:3px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:3px;transition:width 1.2s cubic-bezier(0.4,0,0.2,1);}
+  .score-num{font-family:var(--mono);font-size:12px;font-weight:500;text-align:right;}
+
+  /* Flags */
+  .flags-section{}
+  .flags-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;}
+  .flag-list{display:flex;flex-direction:column;gap:8px;}
+  .flag-item{display:flex;align-items:flex-start;gap:10px;padding:10px 12px;border-radius:7px;border:1px solid;font-size:12px;}
+  .flag-item.warn{background:rgba(255,179,71,0.05);border-color:rgba(255,179,71,0.2);}
+  .flag-item.ok{background:rgba(0,255,148,0.04);border-color:rgba(0,255,148,0.15);}
+  .flag-item.info{background:rgba(0,229,255,0.04);border-color:rgba(0,229,255,0.12);}
+  .flag-dot{width:6px;height:6px;border-radius:50%;margin-top:4px;flex-shrink:0;}
+  .flag-item.warn .flag-dot{background:var(--warning);}
+  .flag-item.ok .flag-dot{background:var(--accent4);}
+  .flag-item.info .flag-dot{background:var(--accent);}
+  .flag-text{color:var(--text2);line-height:1.5;}
+  .flag-text strong{color:var(--text);font-weight:500;}
+
+  /* Rationale */
+  .rationale-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;}
+  .rat-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:10px;}
+  .rat-text{font-size:13px;color:var(--text2);line-height:1.7;font-weight:300;font-style:italic;}
+
+  /* RIGHT PANEL */
+  .right{border-left:1px solid var(--border);padding:28px 24px;display:flex;flex-direction:column;gap:24px;}
+
+  /* Overall score ring */
+  .score-ring-block{display:flex;flex-direction:column;align-items:center;gap:6px;padding:24px 20px;background:var(--surface);border:1px solid var(--border);border-radius:12px;}
+  .ring-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);}
+  .ring-score{font-family:var(--display);font-size:56px;font-weight:800;letter-spacing:-2px;color:var(--accent4);}
+  .ring-max{font-family:var(--mono);font-size:12px;color:var(--text3);}
+  .ring-verdict{font-size:12px;color:var(--accent4);font-weight:500;display:flex;align-items:center;gap:6px;}
+
+  /* Comparison strip */
+  .comparison-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .comp-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);margin-bottom:12px;}
+  .comp-rows{display:flex;flex-direction:column;gap:8px;}
+  .comp-row{display:grid;grid-template-columns:100px 1fr 50px;gap:10px;align-items:center;font-size:11px;}
+  .comp-name{color:var(--text2);display:flex;align-items:center;gap:6px;font-family:var(--mono);}
+  .comp-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0;}
+  .comp-bar-track{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+  .comp-bar-fill{height:100%;border-radius:2px;}
+  .comp-score{font-family:var(--mono);font-size:10px;text-align:right;color:var(--text2);}
+  .comp-row.recommended .comp-name{color:var(--accent4);}
+  .comp-row.recommended .comp-score{color:var(--accent4);}
+
+  /* Approval actions */
+  .approval-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .approval-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.2px;color:var(--text3);}
+  .approve-btn{padding:13px;border-radius:8px;background:var(--accent4);color:#fff;font-weight:600;font-size:13px;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;text-align:center;}
+  .approve-btn:hover{background:#5bc78a;}
+  .action-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .action-btn{padding:9px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:var(--surface2);color:var(--text2);font-family:var(--body);transition:all 0.15s;text-align:center;}
+  .action-btn:hover{color:var(--text);border-color:var(--border2);}
+  .reject-btn{padding:9px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid rgba(255,107,107,0.2);background:rgba(255,107,107,0.06);color:var(--accent3);font-family:var(--body);transition:all 0.15s;text-align:center;}
+  .memo-note{font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;line-height:1.5;}
+
+  /* Vendor summary card */
+  .vendor-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .vc-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;}
+  .vc-dot{width:10px;height:10px;border-radius:50%;}
+  .vc-name{font-family:var(--display);font-size:15px;font-weight:700;}
+  .vc-tag{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,255,148,0.08);border:1px solid rgba(0,255,148,0.18);color:var(--accent4);margin-left:auto;}
+  .vc-stats{display:flex;flex-direction:column;gap:6px;}
+  .vc-stat{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .vc-stat:last-child{border-bottom:none;}
+  .vc-stat-label{color:var(--text3);font-family:var(--mono);}
+  .vc-stat-val{color:var(--text2);font-family:var(--mono);}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  .left>*{animation:fadeUp 0.4s ease forwards;opacity:0;}
+  .left>*:nth-child(1){animation-delay:0.05s;}
+  .left>*:nth-child(2){animation-delay:0.12s;}
+  .left>*:nth-child(3){animation-delay:0.18s;}
+  .left>*:nth-child(4){animation-delay:0.24s;}
+  .right>*{animation:fadeUp 0.4s ease forwards;opacity:0;}
+  .right>*:nth-child(1){animation-delay:0.1s;}
+  .right>*:nth-child(2){animation-delay:0.18s;}
+  .right>*:nth-child(3){animation-delay:0.26s;}
+  .right>*:nth-child(4){animation-delay:0.32s;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="breadcrumb">
+    <span>Decision Mode</span><span>/</span>
+    <span>Customer Support AI</span><span>/</span>
+    <span class="active">Vendor Scorecard</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:8},'*')">← Back to risk analysis</button>
+    <button class="btn btn-ghost">↓ Download PDF memo</button>
+    <button class="btn btn-ghost">Share</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- LEFT -->
+  <div class="left">
+
+    <!-- Recommendation -->
+    <div class="rec-block">
+      <div class="rec-eyebrow">ClauseAI recommendation</div>
+      <div class="rec-headline">Adopt Claude 3.5 Sonnet<br>for Customer Support AI</div>
+      <div class="rec-sub">Based on your workload profile — high volume, latency-sensitive, compliance-critical — Claude 3.5 Sonnet outperforms GPT-4o on quality and cost while meeting all SOC 2 requirements.</div>
+      <div class="rec-meta">
+        <div class="rec-chip">✓ Within budget</div>
+        <div class="rec-chip">✓ SOC 2 compliant</div>
+        <div class="rec-chip">✓ Low migration effort</div>
+        <div class="rec-chip">↓ 40% cost vs current</div>
+      </div>
+    </div>
+
+    <!-- Dimension scores -->
+    <div class="scores-section">
+      <div class="scores-title">Score breakdown · 6 dimensions</div>
+      <div class="score-rows">
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">⚡</span>Performance</div>
+          <div class="bar-track"><div class="bar-fill" style="width:94%;background:var(--accent4)"></div></div>
+          <div class="score-num" style="color:var(--accent4)">94</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">🛡</span>Compliance</div>
+          <div class="bar-track"><div class="bar-fill" style="width:96%;background:var(--accent4)"></div></div>
+          <div class="score-num" style="color:var(--accent4)">96</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">💰</span>Cost efficiency</div>
+          <div class="bar-track"><div class="bar-fill" style="width:88%;background:var(--accent)"></div></div>
+          <div class="score-num" style="color:var(--accent)">88</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">🔗</span>Lock-in risk</div>
+          <div class="bar-track"><div class="bar-fill" style="width:72%;background:var(--warning)"></div></div>
+          <div class="score-num" style="color:var(--warning)">72</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">📊</span>Stability</div>
+          <div class="bar-track"><div class="bar-fill" style="width:91%;background:var(--accent4)"></div></div>
+          <div class="score-num" style="color:var(--accent4)">91</div>
+        </div>
+        <div class="score-row">
+          <div class="score-label"><span class="score-icon">🚀</span>Migration effort</div>
+          <div class="bar-track"><div class="bar-fill" style="width:85%;background:var(--accent)"></div></div>
+          <div class="score-num" style="color:var(--accent)">Low</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Flags -->
+    <div class="flags-section">
+      <div class="flags-title">Flags + considerations</div>
+      <div class="flag-list">
+        <div class="flag-item warn">
+          <div class="flag-dot"></div>
+          <div class="flag-text"><strong>Lock-in risk — medium.</strong> Anthropic's API format differs from OpenAI's. Migration away in the future would require prompt re-engineering. ClauseAI will monitor for switching opportunities.</div>
+        </div>
+        <div class="flag-item ok">
+          <div class="flag-dot"></div>
+          <div class="flag-text"><strong>Migration complexity — low.</strong> Your current prompts are format-agnostic. ClauseAI estimates 2–3 days of engineering time for a full cutover with zero downtime.</div>
+        </div>
+        <div class="flag-item info">
+          <div class="flag-dot"></div>
+          <div class="flag-text"><strong>Tested on your actual workloads.</strong> This scorecard is based on 14 days of production traffic — not synthetic benchmarks. Quality scores reflect real customer support conversations.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rationale -->
+    <div class="rationale-block">
+      <div class="rat-label">Structured rationale</div>
+      <div class="rat-text">"Claude 3.5 Sonnet achieves 94/100 on your workload — 3 points higher than GPT-4o — at 40% lower cost per token. Its hallucination rate on support queries is 1.4% vs GPT-4o's 3.1%. The primary tradeoff is moderate vendor lock-in risk, which ClauseAI will actively monitor post-adoption."</div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <!-- Overall score -->
+    <div class="score-ring-block">
+      <div class="ring-label">Overall recommendation score</div>
+      <div class="ring-score">89</div>
+      <div class="ring-max">out of 100</div>
+      <div class="ring-verdict">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent4)"></div>
+        Strong recommendation to adopt
+      </div>
+    </div>
+
+    <!-- Vendor card -->
+    <div class="vendor-card">
+      <div class="vc-header">
+        <div class="vc-dot" style="background:var(--accent)"></div>
+        <div class="vc-name">Claude 3.5 Sonnet</div>
+        <div class="vc-tag">Recommended</div>
+      </div>
+      <div class="vc-stats">
+        <div class="vc-stat"><span class="vc-stat-label">Provider</span><span class="vc-stat-val">Anthropic</span></div>
+        <div class="vc-stat"><span class="vc-stat-label">Cost / 1M tokens</span><span class="vc-stat-val" style="color:var(--accent4)">$3.00</span></div>
+        <div class="vc-stat"><span class="vc-stat-label">P50 latency</span><span class="vc-stat-val" style="color:var(--accent4)">1.2s</span></div>
+        <div class="vc-stat"><span class="vc-stat-label">Hallucination rate</span><span class="vc-stat-val" style="color:var(--accent4)">1.4%</span></div>
+        <div class="vc-stat"><span class="vc-stat-label">SOC 2</span><span class="vc-stat-val" style="color:var(--accent4)">✓ Certified</span></div>
+        <div class="vc-stat"><span class="vc-stat-label">Est. monthly cost</span><span class="vc-stat-val" style="color:var(--accent4)">$19,200</span></div>
+      </div>
+    </div>
+
+    <!-- Comparison -->
+    <div class="comparison-block">
+      <div class="comp-title">vs. other evaluated models</div>
+      <div class="comp-rows">
+        <div class="comp-row recommended">
+          <div class="comp-name"><div class="comp-dot" style="background:var(--accent4)"></div>Claude 3.5</div>
+          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:89%;background:var(--accent4)"></div></div>
+          <div class="comp-score" style="color:var(--accent4)">89 ★</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-name"><div class="comp-dot" style="background:var(--accent2)"></div>GPT-4o</div>
+          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:74%;background:var(--accent2)"></div></div>
+          <div class="comp-score">74</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-name"><div class="comp-dot" style="background:var(--warning)"></div>Gemini 1.5</div>
+          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:68%;background:var(--warning)"></div></div>
+          <div class="comp-score">68</div>
+        </div>
+        <div class="comp-row">
+          <div class="comp-name"><div class="comp-dot" style="background:var(--text3)"></div>Llama 3.1</div>
+          <div class="comp-bar-track"><div class="comp-bar-fill" style="width:61%;background:var(--text3)"></div></div>
+          <div class="comp-score">61</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Approval actions -->
+    <div class="approval-block">
+      <div class="approval-title">CTO action required</div>
+      <button class="approve-btn" onclick="window.parent.postMessage({type:'navigate',screen:12},'*')">✓ Approve adoption</button>
+      <div class="action-row">
+        <div class="action-btn" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:12},'*')">Delegate to team</div>
+        <div class="action-btn">Request more data</div>
+      </div>
+      <div class="reject-btn">✕ Reject — add rationale</div>
+      <div class="memo-note">Approval auto-generates a structured memo<br>and logs to the audit trail</div>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

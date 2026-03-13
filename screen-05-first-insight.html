@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — First Insight</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif;
+    --display: 'Inter', sans-serif;
+    --body: 'Inter', sans-serif;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:var(--body); min-height:100vh; display:flex; flex-direction:column; }
+
+  /* topbar */
+  .topbar { height:52px; display:flex; align-items:center; padding:0 28px; border-bottom:1px solid var(--border); gap:24px; }
+  .logo { font-family:var(--display); font-weight:800; font-size:16px; letter-spacing:-0.5px; display:flex; align-items:center; gap:8px; }
+  .logo-mark { width:26px; height:26px; background:var(--accent); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; color:#fff; }
+  .logo span { color:var(--accent); }
+  .step-track { display:flex; align-items:center; gap:0; margin-left:24px; }
+  .step { display:flex; align-items:center; gap:8px; font-size:11px; font-family:var(--mono); color:var(--text3); padding:0 14px; }
+  .step.done { color:var(--accent4); }
+  .step.active { color:var(--text); }
+  .step-num { width:18px; height:18px; border-radius:50%; border:1px solid currentColor; display:flex; align-items:center; justify-content:center; font-size:9px; flex-shrink:0; }
+  .step.done .step-num { background:var(--accent4); border-color:var(--accent4); color:#fff; }
+  .step.active .step-num { background:var(--accent); border-color:var(--accent); color:#fff; }
+  .step-div { width:24px; height:1px; background:var(--border2); }
+
+  /* main layout */
+  .page { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 32px; gap:0; }
+
+  /* headline block */
+  .headline-block { text-align:center; margin-bottom:48px; animation: fadeUp 0.6s ease forwards; }
+  .eyebrow { font-family:var(--mono); font-size:10px; text-transform:uppercase; letter-spacing:2px; color:var(--accent4); margin-bottom:16px; display:flex; align-items:center; justify-content:center; gap:8px; }
+  .eyebrow-line { width:32px; height:1px; background:var(--accent4); opacity:0.4; }
+  .headline { font-family:var(--display); font-size:42px; font-weight:800; letter-spacing:-1.5px; line-height:1.1; }
+  .headline .num { color:var(--accent4); }
+  .headline .red { color:var(--accent3); }
+  .sub { font-size:15px; color:var(--text2); font-weight:300; margin-top:14px; max-width:480px; margin-left:auto; margin-right:auto; line-height:1.6; }
+
+  /* insight cards grid */
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; width:100%; max-width:900px; margin-bottom:40px; }
+
+  .insight-card {
+    background:var(--surface); border:1px solid var(--border);
+    border-radius:12px; padding:24px; position:relative; overflow:hidden;
+    animation: fadeUp 0.5s ease forwards; opacity:0;
+  }
+  .insight-card::before { content:''; position:absolute; top:0; left:0; right:0; height:2px; }
+  .insight-card.green::before { background:var(--accent4); }
+  .insight-card.red::before { background:var(--accent3); }
+  .insight-card.warn::before { background:var(--warning); }
+
+  .insight-card:nth-child(1) { animation-delay:0.1s; }
+  .insight-card:nth-child(2) { animation-delay:0.2s; }
+  .insight-card:nth-child(3) { animation-delay:0.3s; }
+
+  .card-icon { font-size:22px; margin-bottom:14px; }
+  .card-type { font-family:var(--mono); font-size:9px; text-transform:uppercase; letter-spacing:1.2px; color:var(--text3); margin-bottom:8px; }
+  .card-headline { font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:-0.5px; line-height:1.1; margin-bottom:8px; }
+  .insight-card.green .card-headline { color:var(--accent4); }
+  .insight-card.red .card-headline { color:var(--accent3); }
+  .insight-card.warn .card-headline { color:var(--warning); }
+  .card-body { font-size:12px; color:var(--text2); line-height:1.6; }
+  .card-detail { margin-top:14px; display:flex; flex-direction:column; gap:6px; }
+  .detail-row { display:flex; justify-content:space-between; align-items:center; font-size:11px; padding:5px 0; border-bottom:1px solid var(--border); }
+  .detail-row:last-child { border-bottom:none; }
+  .detail-label { color:var(--text3); font-family:var(--mono); }
+  .detail-val { color:var(--text2); font-family:var(--mono); }
+  .detail-val.good { color:var(--accent4); }
+  .detail-val.bad { color:var(--accent3); }
+  .detail-val.warn { color:var(--warning); }
+
+  /* secondary insights strip */
+  .secondary-strip { display:flex; gap:12px; width:100%; max-width:900px; margin-bottom:40px; animation: fadeUp 0.5s 0.4s ease forwards; opacity:0; }
+  .sec-item { flex:1; background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px; display:flex; align-items:center; gap:12px; }
+  .sec-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+  .sec-text { font-size:12px; color:var(--text2); line-height:1.4; }
+  .sec-text strong { color:var(--text); font-weight:500; }
+
+  /* CTAs */
+  .cta-row { display:flex; gap:12px; align-items:center; animation: fadeUp 0.5s 0.5s ease forwards; opacity:0; }
+  .btn { padding:13px 28px; border-radius:8px; font-size:14px; font-weight:500; cursor:pointer; border:none; font-family:var(--body); transition:all 0.15s; }
+  .btn-primary { background:var(--accent); color:#fff; font-weight:600; font-size:14px; }
+  .btn-primary:hover { background:#3a4a62; }
+  .btn-ghost { background:var(--surface); color:var(--text2); border:1px solid var(--border); }
+  .btn-ghost:hover { color:var(--text); border-color:var(--border2); }
+  .invite-note { font-size:12px; color:var(--text3); font-family:var(--mono); }
+
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .headline-block { animation-delay:0s; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="step-track">
+    <div class="step done"><div class="step-num">✓</div>Connect</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Scan</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Confirm</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Baseline</div>
+    <div class="step-div"></div>
+    <div class="step active"><div class="step-num">5</div>Insights</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <div class="headline-block">
+    <div class="eyebrow"><div class="eyebrow-line"></div>Baseline complete · Acme Corp<div class="eyebrow-line"></div></div>
+    <div class="headline">We found <span class="num">$34k/mo</span> in savings<br>and <span class="red">2 risks</span> you didn't know about.</div>
+    <div class="sub">ClauseAI analysed 14 systems across 4 vendors in 3 minutes. Here's what we found before you even opened the dashboard.</div>
+  </div>
+
+  <!-- 3 hero insight cards -->
+  <div class="cards">
+
+    <div class="insight-card green">
+      <div class="card-icon">💰</div>
+      <div class="card-type">Cost opportunity</div>
+      <div class="card-headline">$34,200 / mo<br>potential savings</div>
+      <div class="card-body">Routing 40% of summarisation tasks to Llama 3.1 and adding prompt caching on your support pipeline could cut costs significantly.</div>
+      <div class="card-detail">
+        <div class="detail-row"><span class="detail-label">Route to Llama 3.1</span><span class="detail-val good">−$12,400</span></div>
+        <div class="detail-row"><span class="detail-label">Prompt caching</span><span class="detail-val good">−$9,800</span></div>
+        <div class="detail-row"><span class="detail-label">Token optimisation</span><span class="detail-val good">−$12,000</span></div>
+      </div>
+    </div>
+
+    <div class="insight-card red">
+      <div class="card-icon">🛡</div>
+      <div class="card-type">Compliance risk</div>
+      <div class="card-headline">2 gaps need<br>immediate action</div>
+      <div class="card-body">Your Internal Copilot has no prompt injection guard. Your Analytics Summarizer may be processing EU data without GDPR controls.</div>
+      <div class="card-detail">
+        <div class="detail-row"><span class="detail-label">Internal Copilot</span><span class="detail-val bad">No injection guard</span></div>
+        <div class="detail-row"><span class="detail-label">Analytics Summarizer</span><span class="detail-val warn">GDPR review</span></div>
+        <div class="detail-row"><span class="detail-label">Other 12 systems</span><span class="detail-val good">Compliant ✓</span></div>
+      </div>
+    </div>
+
+    <div class="insight-card warn">
+      <div class="card-icon">📈</div>
+      <div class="card-type">Cost anomaly</div>
+      <div class="card-headline">2 pipelines<br>burning fast</div>
+      <div class="card-body">Customer Support AI is up 24% month-over-month and Analytics Summarizer is up 41% — both are on track to exceed budget forecasts.</div>
+      <div class="card-detail">
+        <div class="detail-row"><span class="detail-label">CS pipeline</span><span class="detail-val bad">↑ 24% MoM · $32k</span></div>
+        <div class="detail-row"><span class="detail-label">Analytics</span><span class="detail-val bad">↑ 41% MoM · $15k</span></div>
+        <div class="detail-row"><span class="detail-label">Projected overrun</span><span class="detail-val warn">+$18k by EOM</span></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Secondary insights -->
+  <div class="secondary-strip">
+    <div class="sec-item">
+      <div class="sec-dot" style="background:var(--accent2)"></div>
+      <div class="sec-text"><strong>Vendor concentration risk:</strong> 54% of spend on OpenAI. ClauseAI will monitor for lock-in signals.</div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-dot" style="background:var(--accent)"></div>
+      <div class="sec-text"><strong>Quality baseline set:</strong> Avg output quality 91.4%. Hallucination rate 2.1% across all systems.</div>
+    </div>
+    <div class="sec-item">
+      <div class="sec-dot" style="background:var(--accent4)"></div>
+      <div class="sec-text"><strong>3 teams mapped:</strong> Platform Eng, ML Team, Data Team. Alert routing is ready to configure.</div>
+    </div>
+  </div>
+
+  <!-- CTAs -->
+  <div class="cta-row">
+    <button class="btn btn-primary" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')">View full dashboard →</button>
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:10},'*')">Fix compliance gaps first</button>
+    <button class="btn btn-ghost">Invite team members</button>
+    <div class="invite-note">monitoring is live · all 14 systems tracked</div>
+  </div>
+
+</div>
+</body>
+</html>

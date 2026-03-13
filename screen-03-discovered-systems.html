@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Discovered Systems</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5;
+    --surface: #FFFFFF;
+    --surface2: #F0F0F0;
+    --border: #DCDCDC;
+    --border2: #E8E8E8;
+    --accent: #28354A;
+    --accent2: #EF876E;
+    --accent3: #E06B5D;
+    --accent4: #4CAF50;
+    --warning: #FFB347;
+    --text: #333333;
+    --text2: #555555;
+    --text3: #777777;
+    --mono: 'Inter', sans-serif;
+    --display: 'Inter', sans-serif;
+    --body: 'Inter', sans-serif;
+    --infer: rgba(40,53,74,0.08);
+    --infer-border: rgba(40,53,74,0.25);
+    --override: rgba(255,179,71,0.12);
+    --override-border: rgba(255,179,71,0.35);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: var(--body); min-height: 100vh; }
+
+  /* noise overlay */
+  body::after {
+    content: ''; position: fixed; inset: 0; pointer-events: none; z-index: 999;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+    opacity: 0.1;
+  }
+
+  /* TOPBAR */
+  .topbar {
+    height: 52px; display: flex; align-items: center; padding: 0 28px;
+    border-bottom: 1px solid var(--border); background: var(--bg);
+    gap: 24px; position: sticky; top: 0; z-index: 100;
+  }
+  .logo { font-family: var(--display); font-weight: 800; font-size: 16px; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+  .logo-mark { width: 26px; height: 26px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; }
+  .logo span { color: var(--accent); }
+  .step-track { display: flex; align-items: center; gap: 0; margin-left: 24px; }
+  .step { display: flex; align-items: center; gap: 8px; font-size: 11px; font-family: var(--mono); color: var(--text3); padding: 0 14px; }
+  .step.done { color: var(--accent4); }
+  .step.active { color: var(--text); }
+  .step-num { width: 18px; height: 18px; border-radius: 50%; border: 1px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 9px; flex-shrink: 0; }
+  .step.done .step-num { background: var(--accent4); border-color: var(--accent4); color: #fff; }
+  .step.active .step-num { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .step-div { width: 24px; height: 1px; background: var(--border2); }
+  .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+  .scan-pill { display: flex; align-items: center; gap: 6px; background: rgba(0,255,148,0.06); border: 1px solid rgba(0,255,148,0.18); border-radius: 20px; padding: 4px 12px; font-family: var(--mono); font-size: 10px; color: var(--accent4); }
+  .pulse { width: 6px; height: 6px; background: var(--accent4); border-radius: 50%; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  /* LAYOUT */
+  .page { display: grid; grid-template-columns: 300px 1fr; min-height: calc(100vh - 52px); }
+
+  /* LEFT PANEL */
+  .left-panel { border-right: 1px solid var(--border); padding: 32px 24px; display: flex; flex-direction: column; gap: 28px; }
+  .panel-title { font-family: var(--display); font-weight: 700; font-size: 20px; letter-spacing: -0.5px; line-height: 1.2; }
+  .panel-sub { font-size: 13px; color: var(--text2); font-weight: 300; line-height: 1.6; margin-top: 8px; }
+
+  .scan-summary { display: flex; flex-direction: column; gap: 10px; }
+  .sum-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 8px; }
+  .sum-label { font-size: 12px; color: var(--text2); }
+  .sum-val { font-family: var(--mono); font-size: 14px; font-weight: 500; }
+  .sum-val.cyan { color: var(--accent); }
+  .sum-val.green { color: var(--accent4); }
+  .sum-val.purple { color: var(--accent2); }
+  .sum-val.warn { color: var(--warning); }
+
+  .vendor-list { display: flex; flex-direction: column; gap: 6px; }
+  .vendor-row { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 7px; font-size: 12px; }
+  .vendor-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .vendor-name { flex: 1; color: var(--text2); }
+  .vendor-count { font-family: var(--mono); font-size: 10px; color: var(--text3); }
+  .vendor-cost { font-family: var(--mono); font-size: 11px; }
+
+  .left-actions { margin-top: auto; display: flex; flex-direction: column; gap: 10px; }
+  .btn { padding: 11px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; font-family: var(--body); transition: all 0.15s; text-align: center; }
+  .btn-primary { background: var(--accent); color: #fff; font-weight: 600; }
+  .btn-primary:hover { background: #33ecff; }
+  .btn-ghost { background: var(--surface); color: var(--text2); border: 1px solid var(--border); }
+  .btn-ghost:hover { border-color: var(--border2); color: var(--text); }
+  .confirm-note { font-size: 11px; color: var(--text3); text-align: center; font-family: var(--mono); line-height: 1.5; }
+
+  /* RIGHT PANEL */
+  .right-panel { padding: 28px 32px; overflow-y: auto; }
+  .right-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+  .right-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--text3); }
+  .filter-row { display: flex; gap: 8px; }
+  .filter-btn { padding: 5px 12px; border-radius: 4px; font-size: 11px; font-family: var(--mono); border: 1px solid var(--border); background: var(--surface); color: var(--text3); cursor: pointer; transition: all 0.15s; }
+  .filter-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.06); }
+
+  /* SYSTEM TABLE */
+  .systems-table { width: 100%; border-collapse: collapse; }
+  .systems-table thead tr { border-bottom: 1px solid var(--border); }
+  .systems-table th { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); padding: 0 12px 10px; text-align: left; font-weight: 400; }
+  .systems-table th:first-child { padding-left: 0; }
+
+  .sys-row { border-bottom: 1px solid var(--border); transition: background 0.12s; }
+  .sys-row:hover { background: rgba(255,255,255,0.015); }
+  .sys-row td { padding: 14px 12px; vertical-align: top; }
+  .sys-row td:first-child { padding-left: 0; }
+
+  /* System name cell */
+  .sys-name-cell { display: flex; flex-direction: column; gap: 4px; }
+  .sys-name { font-size: 13px; font-weight: 500; color: var(--text); }
+  .sys-type { font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text3); }
+
+  /* Vendor badge */
+  .vendor-badge { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 4px; font-family: var(--mono); font-size: 10px; background: var(--surface2); border: 1px solid var(--border); color: var(--text2); }
+
+  /* Inferred field — editable */
+  .inferred { position: relative; }
+  .inferred-val {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: var(--infer); border: 1px solid var(--infer-border);
+    border-radius: 5px; padding: 4px 8px;
+    font-size: 12px; color: var(--text2);
+    cursor: pointer; transition: all 0.15s;
+    font-family: var(--mono);
+  }
+  .inferred-val:hover { background: rgba(123,97,255,0.14); border-color: rgba(123,97,255,0.4); color: var(--text); }
+  .inferred-val .edit-icon { opacity: 0; font-size: 10px; transition: opacity 0.15s; }
+  .inferred-val:hover .edit-icon { opacity: 1; }
+  .inferred-val.edited { background: var(--override); border-color: var(--override-border); color: var(--warning); }
+
+  /* Compliance badges */
+  .compliance-badges { display: flex; flex-wrap: wrap; gap: 4px; }
+  .comp-badge { font-family: var(--mono); font-size: 9px; padding: 2px 6px; border-radius: 3px; }
+  .comp-pass { background: rgba(0,255,148,0.08); border: 1px solid rgba(0,255,148,0.2); color: var(--accent4); }
+  .comp-warn { background: rgba(255,179,71,0.08); border: 1px solid rgba(255,179,71,0.2); color: var(--warning); }
+  .comp-fail { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.2); color: var(--accent3); }
+
+  /* Cost cell */
+  .cost-val { font-family: var(--mono); font-size: 13px; color: var(--text); }
+  .cost-sub { font-family: var(--mono); font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+  /* Infer legend */
+  .infer-legend {
+    display: flex; align-items: center; gap: 20px;
+    padding: 10px 14px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 7px; margin-bottom: 16px; font-size: 11px;
+  }
+  .legend-item { display: flex; align-items: center; gap: 6px; color: var(--text3); }
+  .legend-swatch { width: 28px; height: 14px; border-radius: 3px; }
+  .legend-infer { background: var(--infer); border: 1px solid var(--infer-border); }
+  .legend-override { background: var(--override); border: 1px solid var(--override-border); }
+
+  /* Add system row */
+  .add-row td { padding: 12px 0; }
+  .add-btn { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 6px; border: 1px dashed var(--border2); background: transparent; color: var(--text3); font-size: 12px; cursor: pointer; font-family: var(--body); transition: all 0.15s; }
+  .add-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,229,255,0.04); }
+
+  /* Inline edit tooltip */
+  .edit-tooltip {
+    position: absolute; top: -36px; left: 0;
+    background: #1E2A3A; border: 1px solid var(--border2);
+    border-radius: 5px; padding: 5px 10px;
+    font-size: 10px; font-family: var(--mono); color: var(--text2);
+    white-space: nowrap; pointer-events: none; opacity: 0;
+    transition: opacity 0.15s; z-index: 10;
+  }
+  .inferred-val:hover + .edit-tooltip { opacity: 1; }
+
+  /* Animations */
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .sys-row { animation: fadeUp 0.35s ease forwards; opacity: 0; }
+  .sys-row:nth-child(1) { animation-delay: 0.05s; }
+  .sys-row:nth-child(2) { animation-delay: 0.1s; }
+  .sys-row:nth-child(3) { animation-delay: 0.15s; }
+  .sys-row:nth-child(4) { animation-delay: 0.2s; }
+  .sys-row:nth-child(5) { animation-delay: 0.25s; }
+  .sys-row:nth-child(6) { animation-delay: 0.3s; }
+  .sys-row:nth-child(7) { animation-delay: 0.35s; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="step-track">
+    <div class="step done"><div class="step-num">✓</div>Connect</div>
+    <div class="step-div"></div>
+    <div class="step done"><div class="step-num">✓</div>Scan</div>
+    <div class="step-div"></div>
+    <div class="step active"><div class="step-num">3</div>Confirm</div>
+    <div class="step-div"></div>
+    <div class="step"><div class="step-num">4</div>Baseline</div>
+    <div class="step-div"></div>
+    <div class="step"><div class="step-num">5</div>Insights</div>
+  </div>
+  <div class="topbar-right">
+    <div class="scan-pill"><div class="pulse"></div>Scan complete · 14 systems found</div>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- LEFT PANEL -->
+  <aside class="left-panel">
+    <div>
+      <div class="panel-title">Review discovered systems</div>
+      <div class="panel-sub">ClauseAI scanned your connected vendors and inferred team ownership, spend, and compliance exposure. Review and correct anything that looks wrong before we generate your baseline.</div>
+    </div>
+
+    <div class="scan-summary">
+      <div class="sum-row">
+        <div class="sum-label">Systems found</div>
+        <div class="sum-val cyan">14</div>
+      </div>
+      <div class="sum-row">
+        <div class="sum-label">Vendors connected</div>
+        <div class="sum-val purple">4</div>
+      </div>
+      <div class="sum-row">
+        <div class="sum-label">Est. monthly spend</div>
+        <div class="sum-val warn">$84,200</div>
+      </div>
+      <div class="sum-row">
+        <div class="sum-label">Compliance gaps</div>
+        <div class="sum-val" style="color:var(--accent3)">2 flagged</div>
+      </div>
+      <div class="sum-row">
+        <div class="sum-label">Teams identified</div>
+        <div class="sum-val green">3</div>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1.2px; color: var(--text3); margin-bottom: 10px;">Vendors scanned</div>
+      <div class="vendor-list">
+        <div class="vendor-row">
+          <div class="vendor-dot" style="background:#00E5FF"></div>
+          <div class="vendor-name">Anthropic</div>
+          <div class="vendor-count">3 systems</div>
+          <div class="vendor-cost" style="color:var(--accent)">$21k/mo</div>
+        </div>
+        <div class="vendor-row">
+          <div class="vendor-dot" style="background:#7B61FF"></div>
+          <div class="vendor-name">OpenAI</div>
+          <div class="vendor-count">5 systems</div>
+          <div class="vendor-cost" style="color:var(--accent2)">$38k/mo</div>
+        </div>
+        <div class="vendor-row">
+          <div class="vendor-dot" style="background:#FFB347"></div>
+          <div class="vendor-name">Google AI</div>
+          <div class="vendor-count">4 systems</div>
+          <div class="vendor-cost" style="color:var(--warning)">$18k/mo</div>
+        </div>
+        <div class="vendor-row">
+          <div class="vendor-dot" style="background:#00FF94"></div>
+          <div class="vendor-name">Pinecone</div>
+          <div class="vendor-count">2 systems</div>
+          <div class="vendor-cost" style="color:var(--accent4)">$7k/mo</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="left-actions">
+      <button class="btn btn-primary" onclick="window.parent.postMessage({type:'navigate',screen:3},'*')">Confirm + generate baseline →</button>
+      <button class="btn btn-ghost">+ Add system manually</button>
+      <div class="confirm-note">All inferred fields can be edited<br>at any time after onboarding</div>
+    </div>
+  </aside>
+
+  <!-- RIGHT PANEL -->
+  <main class="right-panel">
+    <div class="right-header">
+      <div class="right-title">14 systems discovered · click any purple field to edit</div>
+      <div class="filter-row">
+        <button class="filter-btn active">All</button>
+        <button class="filter-btn">Model APIs</button>
+        <button class="filter-btn">Agents</button>
+        <button class="filter-btn">Vector DBs</button>
+        <button class="filter-btn" style="color:var(--accent3); border-color:rgba(255,107,107,0.3)">⚠ Issues</button>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="infer-legend">
+      <div class="legend-item">
+        <div class="legend-swatch legend-infer"></div>
+        <span>AI inferred — click to edit</span>
+      </div>
+      <div class="legend-item">
+        <div class="legend-swatch legend-override" style="border-color: var(--override-border)"></div>
+        <span>Edited by you</span>
+      </div>
+      <div style="margin-left:auto; font-size:11px; color:var(--text3); font-family:var(--mono)">
+        3 fields edited · 2 compliance gaps need attention
+      </div>
+    </div>
+
+    <table class="systems-table">
+      <thead>
+        <tr>
+          <th style="width:200px">System</th>
+          <th style="width:110px">Vendor</th>
+          <th style="width:140px">Team owner</th>
+          <th style="width:100px">Monthly cost</th>
+          <th>Compliance</th>
+        </tr>
+      </thead>
+      <tbody>
+
+        <!-- Row 1 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Customer Support AI</div><div class="sys-type">Model API · Production</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#7B61FF;flex-shrink:0"></div>OpenAI</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val edited" onclick="this.classList.toggle('edited')">Platform Eng <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$32,100</div>
+            <div class="cost-sub">↑ 24% MoM</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <div class="inferred" style="position:relative">
+                <div class="inferred-val comp-warn" style="padding:2px 7px; font-size:9px; border:none; background: rgba(255,179,71,0.08); border:1px solid rgba(255,179,71,0.2); color:var(--warning); cursor:pointer">⚠ SOC 2 partial <span class="edit-icon">✎</span></div>
+              </div>
+              <span class="comp-badge comp-pass">PII ✓</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 2 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Internal Copilot</div><div class="sys-type">Agent · Production</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#00E5FF;flex-shrink:0"></div>Anthropic</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val" onclick="this.classList.toggle('edited')">ML Team <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$19,800</div>
+            <div class="cost-sub">Stable</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <span class="comp-badge comp-pass">SOC 2 ✓</span>
+              <div class="inferred" style="position:relative">
+                <div class="inferred-val" style="padding:2px 7px; font-size:9px; background: rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.2); color:var(--accent3); cursor:pointer">✕ No injection guard <span class="edit-icon">✎</span></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 3 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Analytics Summarizer</div><div class="sys-type">Model API · Production</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#FFB347;flex-shrink:0"></div>Google AI</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val edited" onclick="this.classList.toggle('edited')">Data Team <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$15,200</div>
+            <div class="cost-sub">↑ 41% MoM</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <div class="inferred" style="position:relative">
+                <div class="inferred-val" style="padding:2px 7px; font-size:9px; background: rgba(255,179,71,0.08); border:1px solid rgba(255,179,71,0.2); color:var(--warning); cursor:pointer">⚠ GDPR review needed <span class="edit-icon">✎</span></div>
+              </div>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 4 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Doc Intelligence</div><div class="sys-type">Model API · Production</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#00E5FF;flex-shrink:0"></div>Anthropic</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val" onclick="this.classList.toggle('edited')">Platform Eng <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$9,400</div>
+            <div class="cost-sub">↓ 8% MoM</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <span class="comp-badge comp-pass">SOC 2 ✓</span>
+              <span class="comp-badge comp-pass">PII ✓</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 5 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Knowledge Base Search</div><div class="sys-type">Vector DB · Production</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#00FF94;flex-shrink:0"></div>Pinecone</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val" onclick="this.classList.toggle('edited')">ML Team <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$4,800</div>
+            <div class="cost-sub">Stable</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <span class="comp-badge comp-pass">SOC 2 ✓</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 6 -->
+        <tr class="sys-row">
+          <td><div class="sys-name-cell"><div class="sys-name">Sales Email Writer</div><div class="sys-type">Agent · Staging</div></div></td>
+          <td><div class="vendor-badge"><div style="width:6px;height:6px;border-radius:50%;background:#7B61FF;flex-shrink:0"></div>OpenAI</div></td>
+          <td>
+            <div class="inferred" style="position:relative">
+              <div class="inferred-val edited" onclick="this.classList.toggle('edited')">Growth Team <span class="edit-icon">✎</span></div>
+              <div class="edit-tooltip">Click to reassign team</div>
+            </div>
+          </td>
+          <td>
+            <div class="cost-val">$2,900</div>
+            <div class="cost-sub">Staging</div>
+          </td>
+          <td>
+            <div class="compliance-badges">
+              <span class="comp-badge comp-pass">SOC 2 ✓</span>
+              <span class="comp-badge comp-pass">PII ✓</span>
+            </div>
+          </td>
+        </tr>
+
+        <!-- Row 7: add more systems hint -->
+        <tr class="sys-row" style="opacity:0.5">
+          <td><div class="sys-name-cell"><div class="sys-name" style="color:var(--text3)">+ 8 more systems</div><div class="sys-type">Scroll to view all</div></div></td>
+          <td></td><td></td>
+          <td><div class="cost-val" style="color:var(--text3)">$0</div></td>
+          <td></td>
+        </tr>
+
+        <!-- Add row -->
+        <tr class="add-row">
+          <td colspan="5">
+            <button class="add-btn">＋ Add a system ClauseAI didn't find</button>
+          </td>
+        </tr>
+
+      </tbody>
+    </table>
+  </main>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Switching Evaluation</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FBF8F5; --surface: #FFFFFF; --surface2: #F0F0F0;
+    --border: #DCDCDC; --border2: #E8E8E8;
+    --accent: #28354A; --accent2: #EF876E; --accent3: #E06B5D;
+    --accent4: #4CAF50; --warning: #FFB347;
+    --text: #333333; --text2: #555555; --text3: #777777;
+    --mono: 'Inter', sans-serif; --display: 'Inter', sans-serif; --body: 'Inter', sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:var(--body);min-height:100vh;}
+
+  .topbar{height:52px;display:flex;align-items:center;padding:0 28px;border-bottom:1px solid var(--border);background:var(--bg);}
+  .logo{font-family:var(--display);font-weight:800;font-size:16px;letter-spacing:-0.5px;display:flex;align-items:center;gap:8px;}
+  .logo-mark{width:26px;height:26px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#fff;}
+  .logo span{color:var(--accent);}
+  .breadcrumb{font-family:var(--mono);font-size:11px;color:var(--text3);display:flex;align-items:center;gap:6px;margin-left:16px;}
+  .breadcrumb .active{color:var(--text2);}
+  .topbar-right{margin-left:auto;display:flex;gap:10px;align-items:center;}
+  .btn{padding:8px 18px;border-radius:6px;font-size:12px;font-weight:500;cursor:pointer;border:none;font-family:var(--body);transition:all 0.15s;}
+  .btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border);}
+  .btn-primary{background:var(--accent);color:#fff;font-weight:600;}
+  .btn-primary:hover{background:#3a4a62;}
+
+  .page{display:grid;grid-template-columns:1fr 320px;min-height:calc(100vh - 52px);}
+
+  /* LEFT */
+  .left{padding:32px 36px;display:flex;flex-direction:column;gap:22px;overflow-y:auto;}
+  .right{border-left:1px solid var(--border);padding:28px 24px;display:flex;flex-direction:column;gap:20px;overflow-y:auto;}
+
+  .section-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin-bottom:12px;}
+
+  /* Trigger block */
+  .trigger-block{background:rgba(255,179,71,0.04);border:1px solid rgba(255,179,71,0.2);border-radius:10px;padding:18px;display:flex;align-items:flex-start;gap:14px;}
+  .tb-icon{font-size:22px;flex-shrink:0;margin-top:2px;}
+  .tb-content{}
+  .tb-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--warning);margin-bottom:6px;}
+  .tb-title{font-size:14px;font-weight:500;margin-bottom:5px;}
+  .tb-desc{font-size:12px;color:var(--text2);line-height:1.6;font-weight:300;}
+
+  /* Current vs baseline */
+  .perf-compare{border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .pc-header{display:grid;grid-template-columns:130px 1fr 1fr 80px;border-bottom:1px solid var(--border);background:var(--surface2);}
+  .pc-th{padding:10px 14px;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+  .pc-th:not(:last-child){border-right:1px solid var(--border);}
+  .pc-row{display:grid;grid-template-columns:130px 1fr 1fr 80px;border-bottom:1px solid var(--border);}
+  .pc-row:last-child{border-bottom:none;}
+  .pc-cell{padding:11px 14px;font-size:12px;}
+  .pc-cell:not(:last-child){border-right:1px solid var(--border);}
+  .pc-metric{font-family:var(--mono);font-size:10px;color:var(--text3);}
+  .pc-val{font-family:var(--mono);}
+  .pc-val.good{color:var(--accent4);}
+  .pc-val.bad{color:var(--accent3);}
+  .pc-val.warn{color:var(--warning);}
+  .pc-val.neutral{color:var(--text2);}
+  .pc-delta{font-family:var(--mono);font-size:10px;text-align:right;}
+  .pc-delta.positive{color:var(--accent3);}
+  .pc-delta.negative{color:var(--accent4);}
+
+  /* Proposed alternative */
+  .alternative-block{background:rgba(0,255,148,0.03);border:1px solid rgba(0,255,148,0.16);border-radius:10px;padding:18px;}
+  .ab-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+  .ab-title{font-size:14px;font-weight:500;display:flex;align-items:center;gap:8px;}
+  .ab-tag{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:rgba(0,255,148,0.08);border:1px solid rgba(0,255,148,0.2);color:var(--accent4);}
+  .ab-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  .ab-stat{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:10px 12px;}
+  .ab-stat-val{font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:-0.4px;margin-bottom:2px;}
+  .ab-stat-label{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:0.6px;color:var(--text3);}
+  .ab-rationale{margin-top:14px;font-size:12px;color:var(--text2);line-height:1.6;font-weight:300;font-style:italic;padding-top:12px;border-top:1px solid rgba(0,255,148,0.1);}
+
+  /* Migration effort */
+  .migration-block{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+  .mb-header{padding:12px 16px;border-bottom:1px solid var(--border);font-size:13px;font-weight:500;display:flex;align-items:center;justify-content:space-between;}
+  .mb-effort-tag{font-family:var(--mono);font-size:9px;padding:3px 8px;border-radius:3px;background:rgba(0,255,148,0.08);border:1px solid rgba(0,255,148,0.2);color:var(--accent4);}
+  .mb-steps{display:flex;flex-direction:column;gap:0;}
+  .mb-step{display:flex;align-items:flex-start;gap:12px;padding:11px 16px;border-bottom:1px solid var(--border);font-size:12px;}
+  .mb-step:last-child{border-bottom:none;}
+  .mb-step-num{width:20px;height:20px;border-radius:50%;background:var(--surface2);border:1px solid var(--border2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:9px;color:var(--text3);flex-shrink:0;margin-top:1px;}
+  .mb-step-content{}
+  .mb-step-title{font-weight:500;margin-bottom:2px;}
+  .mb-step-desc{font-size:11px;color:var(--text3);font-family:var(--mono);}
+
+  /* RIGHT panel */
+  .decision-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .dc-title{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:1px;color:var(--text3);}
+  .initiate-btn{padding:13px;border-radius:7px;background:var(--accent);color:#fff;font-weight:600;font-size:13px;cursor:pointer;border:none;font-family:var(--body);text-align:center;transition:all 0.15s;}
+  .initiate-btn:hover{background:#3a4a62;}
+  .initiate-note{font-family:var(--mono);font-size:9px;color:var(--text3);text-align:center;line-height:1.5;}
+  .dismiss-btn{padding:9px;border-radius:7px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:var(--body);text-align:center;transition:all 0.15s;}
+  .dismiss-btn:hover{color:var(--text);border-color:var(--border2);}
+
+  .snapshot-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .snap-rows{display:flex;flex-direction:column;gap:6px;}
+  .snap-row{display:flex;justify-content:space-between;align-items:center;font-size:11px;padding:5px 0;border-bottom:1px solid var(--border);}
+  .snap-row:last-child{border-bottom:none;}
+  .snap-label{color:var(--text3);font-family:var(--mono);}
+  .snap-val{font-family:var(--mono);color:var(--text2);}
+
+  .history-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;}
+  .hist-row{display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border);font-size:11px;}
+  .hist-row:last-child{border-bottom:none;}
+  .hist-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+  .hist-text{flex:1;color:var(--text3);}
+  .hist-outcome{font-family:var(--mono);font-size:9px;}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+  .left>*{animation:fadeUp 0.35s ease forwards;opacity:0;}
+  .left>*:nth-child(1){animation-delay:0.04s;}
+  .left>*:nth-child(2){animation-delay:0.09s;}
+  .left>*:nth-child(3){animation-delay:0.14s;}
+  .left>*:nth-child(4){animation-delay:0.19s;}
+  .right>*{animation:fadeUp 0.35s ease forwards;opacity:0;}
+  .right>*:nth-child(1){animation-delay:0.08s;}
+  .right>*:nth-child(2){animation-delay:0.14s;}
+  .right>*:nth-child(3){animation-delay:0.2s;}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="logo" style="cursor:pointer" onclick="window.parent.postMessage({type:'navigate',screen:5},'*')"><div class="logo-mark">C/</div>Clause<span>AI</span></div>
+  <div class="breadcrumb">
+    <span>Management Mode</span><span>/</span>
+    <span>Customer Support AI</span><span>/</span>
+    <span class="active">Switching Evaluation</span>
+  </div>
+  <div class="topbar-right">
+    <button class="btn btn-ghost" onclick="window.parent.postMessage({type:'navigate',screen:10},'*')">← Back to alerts</button>
+    <button class="btn btn-primary" onclick="window.parent.postMessage({type:'navigate',screen:6},'*')">Initiate Decision Mode →</button>
+  </div>
+</header>
+
+<div class="page">
+
+  <!-- LEFT -->
+  <div class="left">
+
+    <!-- Trigger -->
+    <div class="trigger-block">
+      <div class="tb-icon">⚡</div>
+      <div class="tb-content">
+        <div class="tb-label">Switching evaluation triggered</div>
+        <div class="tb-title">GPT-4o hallucination regression — switch candidate identified</div>
+        <div class="tb-desc">Following the hallucination spike alert, ClauseAI re-evaluated your Customer Support AI pipeline and identified a viable switching candidate. Performance gap between current and proposed has widened sufficiently to recommend a formal evaluation.</div>
+      </div>
+    </div>
+
+    <!-- Current vs baseline table -->
+    <div>
+      <div class="section-label">Current performance vs. baseline</div>
+      <div class="perf-compare">
+        <div class="pc-header">
+          <div class="pc-th">Metric</div>
+          <div class="pc-th">Baseline (30d avg)</div>
+          <div class="pc-th">Current (7d avg)</div>
+          <div class="pc-th">Delta</div>
+        </div>
+        <div class="pc-row">
+          <div class="pc-cell pc-metric">Hallucination rate</div>
+          <div class="pc-cell"><span class="pc-val good">1.5%</span></div>
+          <div class="pc-cell"><span class="pc-val bad">4.8%</span></div>
+          <div class="pc-delta positive">▲ +220%</div>
+        </div>
+        <div class="pc-row">
+          <div class="pc-cell pc-metric">Output quality</div>
+          <div class="pc-cell"><span class="pc-val good">88/100</span></div>
+          <div class="pc-cell"><span class="pc-val warn">81/100</span></div>
+          <div class="pc-delta positive">▼ −8%</div>
+        </div>
+        <div class="pc-row">
+          <div class="pc-cell pc-metric">P50 latency</div>
+          <div class="pc-cell"><span class="pc-val neutral">1.8s</span></div>
+          <div class="pc-cell"><span class="pc-val warn">2.4s</span></div>
+          <div class="pc-delta positive">▲ +33%</div>
+        </div>
+        <div class="pc-row">
+          <div class="pc-cell pc-metric">Cost / 1M tok</div>
+          <div class="pc-cell"><span class="pc-val neutral">$5.00</span></div>
+          <div class="pc-cell"><span class="pc-val neutral">$5.00</span></div>
+          <div class="pc-delta" style="color:var(--text3)">— same</div>
+        </div>
+        <div class="pc-row">
+          <div class="pc-cell pc-metric">Error rate</div>
+          <div class="pc-cell"><span class="pc-val good">0.3%</span></div>
+          <div class="pc-cell"><span class="pc-val bad">1.1%</span></div>
+          <div class="pc-delta positive">▲ +267%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Proposed alternative -->
+    <div>
+      <div class="section-label">Proposed alternative</div>
+      <div class="alternative-block">
+        <div class="ab-header">
+          <div class="ab-title">
+            <div style="width:10px;height:10px;border-radius:50%;background:var(--accent4)"></div>
+            Claude 3.5 Sonnet · Anthropic
+            <div class="ab-tag">ClauseAI recommended</div>
+          </div>
+        </div>
+        <div class="ab-stats">
+          <div class="ab-stat">
+            <div class="ab-stat-val" style="color:var(--accent4)">1.4%</div>
+            <div class="ab-stat-label">Hallucination</div>
+          </div>
+          <div class="ab-stat">
+            <div class="ab-stat-val" style="color:var(--accent4)">94</div>
+            <div class="ab-stat-label">Quality score</div>
+          </div>
+          <div class="ab-stat">
+            <div class="ab-stat-val" style="color:var(--accent4)">$3.00</div>
+            <div class="ab-stat-label">Per 1M tokens</div>
+          </div>
+          <div class="ab-stat">
+            <div class="ab-stat-val" style="color:var(--accent4)">1.2s</div>
+            <div class="ab-stat-label">P50 latency</div>
+          </div>
+        </div>
+        <div class="ab-rationale">"Based on 14 days of historical evaluation data for this pipeline, Claude 3.5 Sonnet is the strongest alternative available. No other connected model meets all compliance requirements while outperforming on quality and cost at this volume."</div>
+      </div>
+    </div>
+
+    <!-- Migration effort -->
+    <div>
+      <div class="section-label">Migration effort estimate</div>
+      <div class="migration-block">
+        <div class="mb-header">
+          Customer Support AI → Claude 3.5 Sonnet
+          <div class="mb-effort-tag">Low effort · ~2–3 days</div>
+        </div>
+        <div class="mb-steps">
+          <div class="mb-step">
+            <div class="mb-step-num">1</div>
+            <div class="mb-step-content">
+              <div class="mb-step-title">Prompt review &amp; adaption</div>
+              <div class="mb-step-desc">~4 hrs · system prompts are format-agnostic · minor XML tag adjustments</div>
+            </div>
+          </div>
+          <div class="mb-step">
+            <div class="mb-step-num">2</div>
+            <div class="mb-step-content">
+              <div class="mb-step-title">Shadow testing against live traffic</div>
+              <div class="mb-step-desc">~1 day · run in parallel · ClauseAI monitors quality delta automatically</div>
+            </div>
+          </div>
+          <div class="mb-step">
+            <div class="mb-step-num">3</div>
+            <div class="mb-step-content">
+              <div class="mb-step-title">Staged cutover (10% → 100%)</div>
+              <div class="mb-step-desc">~1 day · incremental rollout · instant rollback if quality drops below threshold</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- RIGHT -->
+  <div class="right">
+
+    <div class="decision-card">
+      <div class="dc-title">CTO action</div>
+      <button class="initiate-btn" onclick="window.parent.postMessage({type:'navigate',screen:6},'*')">Initiate Decision Mode →</button>
+      <div class="initiate-note">Starts a full formal evaluation with scorecard and approval flow</div>
+      <div class="dismiss-btn">Dismiss — continue monitoring</div>
+    </div>
+
+    <div class="snapshot-card">
+      <div class="section-label">Pipeline snapshot</div>
+      <div class="snap-rows">
+        <div class="snap-row"><span class="snap-label">Pipeline</span><span class="snap-val">Customer Support AI</span></div>
+        <div class="snap-row"><span class="snap-label">Current model</span><span class="snap-val" style="color:var(--accent2)">GPT-4o</span></div>
+        <div class="snap-row"><span class="snap-label">Monthly spend</span><span class="snap-val" style="color:var(--accent3)">$32,100</span></div>
+        <div class="snap-row"><span class="snap-label">Daily volume</span><span class="snap-val">~2.4M tokens</span></div>
+        <div class="snap-row"><span class="snap-label">Team owner</span><span class="snap-val">Platform Eng</span></div>
+        <div class="snap-row"><span class="snap-label">Last evaluated</span><span class="snap-val">14 days ago</span></div>
+        <div class="snap-row"><span class="snap-label">Trigger reason</span><span class="snap-val" style="color:var(--warning)">Hallucination spike</span></div>
+      </div>
+    </div>
+
+    <div class="history-card">
+      <div class="section-label">Switching history · this pipeline</div>
+      <div class="hist-row">
+        <div class="hist-dot" style="background:var(--warning)"></div>
+        <div class="hist-text">GPT-4o regression · now</div>
+        <div class="hist-outcome" style="color:var(--warning)">In review</div>
+      </div>
+      <div class="hist-row">
+        <div class="hist-dot" style="background:var(--accent4)"></div>
+        <div class="hist-text">GPT-3.5 → GPT-4o</div>
+        <div class="hist-outcome" style="color:var(--accent4)">Adopted</div>
+      </div>
+      <div class="hist-row">
+        <div class="hist-dot" style="background:var(--text3)"></div>
+        <div class="hist-text">Claude 2 evaluation</div>
+        <div class="hist-outcome" style="color:var(--text3)">Rejected</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+</body>
+</html>

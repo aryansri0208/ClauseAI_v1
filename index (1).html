@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClauseAI — Interactive Prototype</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#080B12; --surface:#0D1120; --surface2:#111827;
+    --border:#1E2A3A; --border2:#243044;
+    --accent:#00E5FF; --accent2:#7B61FF; --accent3:#FF6B6B;
+    --accent4:#00FF94; --warning:#FFB347;
+    --text:#E8EDF5; --text2:#8B9AB5; --text3:#3A4A62;
+    --mono:'IBM Plex Mono',monospace; --display:'Syne',sans-serif; --body:'DM Sans',sans-serif;
+    --nav-h: 48px;
+    --minimap-w: 220px;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html,body{height:100%;overflow:hidden;background:var(--bg);font-family:var(--body);}
+
+  /* ── PROTOTYPE NAV BAR ── */
+  .proto-bar {
+    position: fixed; top: 0; left: 0; right: 0; height: var(--nav-h);
+    background: #050810; border-bottom: 1px solid var(--border2);
+    display: flex; align-items: center; gap: 0; z-index: 9000;
+  }
+  .proto-logo {
+    padding: 0 16px; font-family: var(--display); font-weight: 800; font-size: 13px;
+    letter-spacing: -0.3px; color: var(--text2); border-right: 1px solid var(--border);
+    height: 100%; display: flex; align-items: center; gap: 7px; white-space: nowrap;
+  }
+  .proto-logo-mark { width: 20px; height: 20px; background: linear-gradient(135deg,var(--accent),var(--accent2)); border-radius: 4px; display: flex; align-items: center; justify-content: center; font-size: 8px; font-weight: 800; color: #000; }
+  .proto-logo span { color: var(--accent); }
+  .proto-tag { font-family: var(--mono); font-size: 8px; padding: 2px 6px; border-radius: 3px; background: rgba(123,97,255,0.1); border: 1px solid rgba(123,97,255,0.25); color: var(--accent2); margin-left: 4px; }
+
+  /* screen nav track */
+  .screen-track {
+    flex: 1; display: flex; align-items: center; gap: 0;
+    overflow-x: auto; padding: 0 12px;
+    scrollbar-width: none;
+  }
+  .screen-track::-webkit-scrollbar { display: none; }
+  .screen-btn {
+    display: flex; align-items: center; gap: 6px; padding: 0 10px; height: var(--nav-h);
+    font-family: var(--mono); font-size: 9px; color: var(--text3); cursor: pointer;
+    border: none; background: transparent; white-space: nowrap;
+    border-bottom: 2px solid transparent; transition: all 0.15s; flex-shrink: 0;
+  }
+  .screen-btn:hover { color: var(--text2); }
+  .screen-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .screen-btn .screen-num { width: 15px; height: 15px; border-radius: 50%; border: 1px solid currentColor; display: flex; align-items: center; justify-content: center; font-size: 7px; flex-shrink: 0; }
+  .screen-btn.active .screen-num { background: var(--accent); border-color: var(--accent); color: #000; }
+  .screen-btn.group-onboarding.active { color: var(--accent2); border-bottom-color: var(--accent2); }
+  .screen-btn.group-onboarding.active .screen-num { background: var(--accent2); border-color: var(--accent2); }
+  .screen-btn.group-decision.active { color: var(--warning); border-bottom-color: var(--warning); }
+  .screen-btn.group-decision.active .screen-num { background: var(--warning); border-color: var(--warning); color: #000; }
+  .screen-btn.group-management.active { color: var(--accent3); border-bottom-color: var(--accent3); }
+  .screen-btn.group-management.active .screen-num { background: var(--accent3); border-color: var(--accent3); }
+
+  .track-divider { width: 1px; height: 20px; background: var(--border); margin: 0 4px; flex-shrink: 0; }
+  .track-group-label { font-family: var(--mono); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; padding: 0 6px; color: var(--text3); flex-shrink: 0; }
+
+  /* right controls */
+  .proto-controls {
+    display: flex; align-items: center; gap: 0;
+    border-left: 1px solid var(--border); height: 100%;
+  }
+  .ctrl-btn {
+    width: var(--nav-h); height: var(--nav-h); display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; border-right: 1px solid var(--border);
+    color: var(--text3); cursor: pointer; font-size: 14px; transition: all 0.12s;
+  }
+  .ctrl-btn:hover { color: var(--text); background: var(--surface); }
+  .ctrl-btn:last-child { border-right: none; }
+  .ctrl-btn.active { color: var(--accent); }
+
+  .nav-arrows { display: flex; align-items: center; gap: 0; border-left: 1px solid var(--border); }
+  .arrow-btn {
+    width: 40px; height: var(--nav-h); display: flex; align-items: center; justify-content: center;
+    background: transparent; border: none; color: var(--text3); cursor: pointer; font-size: 16px;
+    transition: all 0.12s;
+  }
+  .arrow-btn:hover { color: var(--text); background: var(--surface); }
+  .arrow-btn:disabled { opacity: 0.2; cursor: not-allowed; }
+  .screen-counter { font-family: var(--mono); font-size: 10px; color: var(--text3); padding: 0 10px; white-space: nowrap; }
+
+  /* ── IFRAME WRAPPER ── */
+  .iframe-wrap {
+    position: fixed; top: var(--nav-h); left: 0; right: 0; bottom: 0;
+    background: var(--bg);
+  }
+  .screen-frame {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    border: none; display: none; background: var(--bg);
+  }
+  .screen-frame.active { display: block; }
+
+  /* ── CLICK OVERLAY HOTSPOTS ── */
+  .hotspot-layer {
+    position: fixed; top: var(--nav-h); left: 0; right: 0; bottom: 0;
+    pointer-events: none; z-index: 8000;
+  }
+  .hotspot {
+    position: absolute; pointer-events: all; cursor: pointer;
+    border-radius: 6px; border: 2px solid transparent;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  .hotspot:hover { border-color: rgba(0,229,255,0.5); background: rgba(0,229,255,0.06); }
+  .hotspot-hint {
+    position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    background: #1E2A3A; border: 1px solid var(--border2); border-radius: 4px;
+    padding: 4px 8px; font-family: var(--mono); font-size: 9px; color: var(--text2);
+    white-space: nowrap; opacity: 0; transition: opacity 0.15s; pointer-events: none; z-index: 10;
+  }
+  .hotspot:hover .hotspot-hint { opacity: 1; }
+
+  /* show hotspots toggle */
+  .hotspot { display: none; }
+  body.show-hotspots .hotspot { display: block; }
+
+  /* ── MINIMAP PANEL ── */
+  .minimap {
+    position: fixed; bottom: 20px; right: 20px; width: var(--minimap-w);
+    background: #050810; border: 1px solid var(--border2); border-radius: 10px;
+    overflow: hidden; z-index: 8500; display: none; box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+  }
+  .minimap.open { display: block; }
+  .minimap-header { padding: 10px 14px; border-bottom: 1px solid var(--border); font-family: var(--mono); font-size: 9px; text-transform: uppercase; letter-spacing: 1px; color: var(--text3); display: flex; justify-content: space-between; align-items: center; }
+  .minimap-close { cursor: pointer; color: var(--text3); font-size: 14px; line-height: 1; }
+  .minimap-close:hover { color: var(--text); }
+  .minimap-group { padding: 8px 0; }
+  .minimap-group-label { font-family: var(--mono); font-size: 8px; text-transform: uppercase; letter-spacing: 1px; padding: 4px 14px; color: var(--text3); }
+  .minimap-item {
+    display: flex; align-items: center; gap: 8px; padding: 6px 14px;
+    cursor: pointer; transition: background 0.12s; font-size: 11px; color: var(--text2);
+  }
+  .minimap-item:hover { background: var(--surface); }
+  .minimap-item.active { background: rgba(0,229,255,0.06); color: var(--accent); }
+  .minimap-item.active.onboarding { background: rgba(123,97,255,0.06); color: var(--accent2); }
+  .minimap-item.active.decision { background: rgba(255,179,71,0.06); color: var(--warning); }
+  .minimap-item.active.management { background: rgba(255,107,107,0.06); color: var(--accent3); }
+  .mm-num { width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 7px; flex-shrink: 0; }
+  .minimap-item.active .mm-num { background: var(--accent); border-color: var(--accent); color: #000; }
+  .minimap-item.active.onboarding .mm-num { background: var(--accent2); border-color: var(--accent2); }
+  .minimap-item.active.decision .mm-num { background: var(--warning); border-color: var(--warning); color: #000; }
+  .minimap-item.active.management .mm-num { background: var(--accent3); border-color: var(--accent3); }
+  .mm-star { font-size: 9px; color: var(--accent4); margin-left: auto; }
+
+  /* ── KEYBOARD HINT ── */
+  .kbd-hint {
+    position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+    background: #050810; border: 1px solid var(--border2); border-radius: 20px;
+    padding: 6px 16px; font-family: var(--mono); font-size: 10px; color: var(--text3);
+    display: flex; gap: 16px; z-index: 8500; pointer-events: none;
+    animation: fadeOut 4s 2s ease forwards;
+  }
+  .kbd-hint kbd { background: var(--surface); border: 1px solid var(--border2); border-radius: 3px; padding: 1px 5px; color: var(--text2); font-family: var(--mono); font-size: 9px; }
+  @keyframes fadeOut { 0%{opacity:1} 80%{opacity:1} 100%{opacity:0} }
+
+  /* ── TRANSITIONS ── */
+  .screen-frame { transition: opacity 0.2s ease; }
+  .screen-frame.fade-out { opacity: 0; }
+
+  /* ── HOTSPOT HINT TOGGLE PILL ── */
+  .hotspot-toggle {
+    position: fixed; bottom: 20px; left: 20px;
+    display: flex; align-items: center; gap: 6px;
+    background: #050810; border: 1px solid var(--border2); border-radius: 20px;
+    padding: 6px 14px; font-family: var(--mono); font-size: 10px; color: var(--text3);
+    cursor: pointer; z-index: 8500; transition: all 0.15s;
+  }
+  .hotspot-toggle:hover { color: var(--text2); border-color: var(--border2); }
+  .hotspot-toggle.on { color: var(--accent); border-color: rgba(0,229,255,0.3); }
+  .ht-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+</style>
+</head>
+<body>
+
+<!-- PROTOTYPE NAV BAR -->
+<div class="proto-bar">
+  <div class="proto-logo">
+    <div class="proto-logo-mark">C/</div>
+    Clause<span>AI</span>
+    <div class="proto-tag">prototype</div>
+  </div>
+
+  <div class="screen-track" id="screenTrack">
+    <div class="track-group-label">Onboarding</div>
+    <button class="screen-btn group-onboarding" data-screen="0" onclick="goTo(0)"><div class="screen-num">1</div>Welcome</button>
+    <button class="screen-btn group-onboarding" data-screen="1" onclick="goTo(1)"><div class="screen-num">2</div>Scan</button>
+    <button class="screen-btn group-onboarding" data-screen="2" onclick="goTo(2)"><div class="screen-num">3</div>Confirm ★</button>
+    <button class="screen-btn group-onboarding" data-screen="3" onclick="goTo(3)"><div class="screen-num">4</div>Baseline</button>
+    <button class="screen-btn group-onboarding" data-screen="4" onclick="goTo(4)"><div class="screen-num">5</div>Insights ★</button>
+    <div class="track-divider"></div>
+    <div class="track-group-label">Dashboard</div>
+    <button class="screen-btn" data-screen="5" onclick="goTo(5)"><div class="screen-num">6</div>Overview ★</button>
+    <div class="track-divider"></div>
+    <div class="track-group-label">Decision Mode</div>
+    <button class="screen-btn group-decision" data-screen="6" onclick="goTo(6)"><div class="screen-num">7</div>Requirements</button>
+    <button class="screen-btn group-decision" data-screen="7" onclick="goTo(7)"><div class="screen-num">8</div>Benchmarks</button>
+    <button class="screen-btn group-decision" data-screen="8" onclick="goTo(8)"><div class="screen-num">9</div>Risk Analysis</button>
+    <button class="screen-btn group-decision" data-screen="9" onclick="goTo(9)"><div class="screen-num">10</div>Scorecard ★</button>
+    <div class="track-divider"></div>
+    <div class="track-group-label">Management Mode</div>
+    <button class="screen-btn group-management" data-screen="10" onclick="goTo(10)"><div class="screen-num">11</div>Alert ★</button>
+    <button class="screen-btn group-management" data-screen="11" onclick="goTo(11)"><div class="screen-num">12</div>Switch Eval</button>
+    <button class="screen-btn group-management" data-screen="12" onclick="goTo(12)"><div class="screen-num">13</div>Stakeholder</button>
+  </div>
+
+  <div class="proto-controls">
+    <button class="ctrl-btn" id="hotspotCtrl" title="Toggle clickable hotspots" onclick="toggleHotspots()">◎</button>
+    <button class="ctrl-btn" id="minimapCtrl" title="Screen map" onclick="toggleMinimap()">⊞</button>
+  </div>
+  <div class="nav-arrows">
+    <button class="arrow-btn" id="prevBtn" onclick="prev()" title="Previous (←)">‹</button>
+    <div class="screen-counter" id="screenCounter">1 / 13</div>
+    <button class="arrow-btn" id="nextBtn" onclick="next()" title="Next (→)">›</button>
+  </div>
+</div>
+
+<!-- IFRAMES -->
+<div class="iframe-wrap" id="iframeWrap">
+  <iframe class="screen-frame active" id="frame-0" src="screen-01-welcome-connect.html"></iframe>
+  <iframe class="screen-frame" id="frame-1" src="screen-02-auto-scan.html"></iframe>
+  <iframe class="screen-frame" id="frame-2" src="screen-03-discovered-systems.html"></iframe>
+  <iframe class="screen-frame" id="frame-3" src="screen-04-baseline-generating.html"></iframe>
+  <iframe class="screen-frame" id="frame-4" src="screen-05-first-insight.html"></iframe>
+  <iframe class="screen-frame" id="frame-5" src="screen-06-overview-dashboard.html"></iframe>
+  <iframe class="screen-frame" id="frame-6" src="screen-07-requirements-intake.html"></iframe>
+  <iframe class="screen-frame" id="frame-7" src="screen-08-vendor-benchmarking.html"></iframe>
+  <iframe class="screen-frame" id="frame-8" src="screen-09-risk-tradeoff.html"></iframe>
+  <iframe class="screen-frame" id="frame-9" src="screen-10-vendor-scorecard.html"></iframe>
+  <iframe class="screen-frame" id="frame-10" src="screen-11-alert-recommendation.html"></iframe>
+  <iframe class="screen-frame" id="frame-11" src="screen-12-switching-evaluation.html"></iframe>
+  <iframe class="screen-frame" id="frame-12" src="screen-13-stakeholder-action.html"></iframe>
+</div>
+
+<!-- HOTSPOT LAYER — clickable zones mapped to CTAs per screen -->
+<div class="hotspot-layer" id="hotspotLayer"></div>
+
+<!-- MINIMAP -->
+<div class="minimap" id="minimap">
+  <div class="minimap-header">
+    All screens
+    <span class="minimap-close" onclick="toggleMinimap()">✕</span>
+  </div>
+  <div class="minimap-group">
+    <div class="minimap-group-label" style="color:var(--accent2)">Onboarding</div>
+    <div class="minimap-item onboarding" onclick="goTo(0);toggleMinimap()"><div class="mm-num">1</div>Welcome + Connect</div>
+    <div class="minimap-item onboarding" onclick="goTo(1);toggleMinimap()"><div class="mm-num">2</div>Auto-scan</div>
+    <div class="minimap-item onboarding" onclick="goTo(2);toggleMinimap()"><div class="mm-num">3</div>Confirm Systems<span class="mm-star">★</span></div>
+    <div class="minimap-item onboarding" onclick="goTo(3);toggleMinimap()"><div class="mm-num">4</div>Baseline Generating</div>
+    <div class="minimap-item onboarding" onclick="goTo(4);toggleMinimap()"><div class="mm-num">5</div>First Insight<span class="mm-star">★</span></div>
+  </div>
+  <div class="minimap-group" style="border-top:1px solid var(--border)">
+    <div class="minimap-group-label" style="color:var(--accent)">Dashboard</div>
+    <div class="minimap-item" onclick="goTo(5);toggleMinimap()"><div class="mm-num">6</div>Overview Dashboard<span class="mm-star">★</span></div>
+  </div>
+  <div class="minimap-group" style="border-top:1px solid var(--border)">
+    <div class="minimap-group-label" style="color:var(--warning)">Decision Mode</div>
+    <div class="minimap-item decision" onclick="goTo(6);toggleMinimap()"><div class="mm-num">7</div>Requirements Intake</div>
+    <div class="minimap-item decision" onclick="goTo(7);toggleMinimap()"><div class="mm-num">8</div>Vendor Benchmarking</div>
+    <div class="minimap-item decision" onclick="goTo(8);toggleMinimap()"><div class="mm-num">9</div>Risk + Tradeoff</div>
+    <div class="minimap-item decision" onclick="goTo(9);toggleMinimap()"><div class="mm-num">10</div>Vendor Scorecard<span class="mm-star">★</span></div>
+  </div>
+  <div class="minimap-group" style="border-top:1px solid var(--border)">
+    <div class="minimap-group-label" style="color:var(--accent3)">Management Mode</div>
+    <div class="minimap-item management" onclick="goTo(10);toggleMinimap()"><div class="mm-num">11</div>Alert + Recommendation<span class="mm-star">★</span></div>
+    <div class="minimap-item management" onclick="goTo(11);toggleMinimap()"><div class="mm-num">12</div>Switching Evaluation</div>
+    <div class="minimap-item management" onclick="goTo(12);toggleMinimap()"><div class="mm-num">13</div>Stakeholder Action</div>
+  </div>
+</div>
+
+<!-- KEYBOARD HINT -->
+<div class="kbd-hint" id="kbdHint">
+  <span><kbd>←</kbd><kbd>→</kbd> navigate</span>
+  <span><kbd>1</kbd>–<kbd>9</kbd><kbd>0</kbd> jump to screen</span>
+  <span><kbd>Ctrl+1</kbd><kbd>2</kbd><kbd>3</kbd> screens 11–13</span>
+  <span><kbd>M</kbd> map</span>
+  <span><kbd>H</kbd> hotspots</span>
+  <span><kbd>F</kbd> fullscreen</span>
+</div>
+
+<!-- HOTSPOT TOGGLE PILL -->
+<div class="hotspot-toggle" id="hotspotToggle" onclick="toggleHotspots()">
+  <div class="ht-dot"></div>
+  <span id="hotspotLabel">Show hotspots</span>
+</div>
+
+<script>
+  // ── SCREEN CONFIG ──
+  const screens = [
+    { id: 0, name: 'Welcome + Connect', group: 'onboarding' },
+    { id: 1, name: 'Auto-scan', group: 'onboarding' },
+    { id: 2, name: 'Confirm Systems', group: 'onboarding' },
+    { id: 3, name: 'Baseline Generating', group: 'onboarding' },
+    { id: 4, name: 'First Insight', group: 'onboarding' },
+    { id: 5, name: 'Overview Dashboard', group: 'dashboard' },
+    { id: 6, name: 'Requirements Intake', group: 'decision' },
+    { id: 7, name: 'Vendor Benchmarking', group: 'decision' },
+    { id: 8, name: 'Risk + Tradeoff', group: 'decision' },
+    { id: 9, name: 'Vendor Scorecard', group: 'decision' },
+    { id: 10, name: 'Alert + Recommendation', group: 'management' },
+    { id: 11, name: 'Switching Evaluation', group: 'management' },
+    { id: 12, name: 'Stakeholder Action', group: 'management' },
+  ];
+
+  // Navigation map: screen → { selector-description, target screen }
+  // These are approximate hotspot zones (% of viewport) for each key CTA
+  const hotspots = {
+    0: [ // Screen 1: Welcome → Screen 2
+      { top:'78%', left:'28%', width:'22%', height:'5%', target:1, hint:'Continue → starts scan' },
+    ],
+    1: [ // Screen 2: Scan (auto-advances concept) — no explicit CTA, but show a "skip" zone
+      { top:'91%', left:'35%', width:'30%', height:'6%', target:2, hint:'Scan complete → confirm systems' },
+    ],
+    2: [ // Screen 3: Confirm → Screen 4
+      { top:'82%', left:'1%', width:'17%', height:'5.5%', target:3, hint:'Confirm + generate baseline →' },
+    ],
+    3: [ // Screen 4: Baseline → Screen 5
+      { top:'88%', left:'30%', width:'40%', height:'5%', target:4, hint:'Baseline complete → first insights' },
+    ],
+    4: [ // Screen 5: First Insight → Screen 6
+      { top:'88%', left:'28%', width:'16%', height:'5%', target:5, hint:'View full dashboard →' },
+      { top:'88%', left:'45.5%', width:'16%', height:'5%', target:10, hint:'Fix compliance gaps first →' },
+    ],
+    5: [ // Screen 6: Overview Dashboard → Decision Mode or Management
+      { top:'3%', left:'55%', width:'14%', height:'5.5%', target:6, hint:'Start evaluation → Decision Mode' },
+      { top:'62%', left:'1%', width:'30%', height:'6%', target:10, hint:'Active alert → Alert screen' },
+    ],
+    6: [ // Screen 7: Requirements → Screen 8
+      { top:'2%', left:'82%', width:'12%', height:'5%', target:7, hint:'Run evaluation →' },
+      { top:'91%', left:'65%', width:'18%', height:'5%', target:7, hint:'Run evaluation →' },
+    ],
+    7: [ // Screen 8: Benchmarking → Screen 9 or 10
+      { top:'2%', left:'84%', width:'10%', height:'5%', target:9, hint:'View scorecard →' },
+      { top:'92%', left:'60%', width:'18%', height:'5%', target:9, hint:'View full scorecard →' },
+      { top:'16%', left:'84%', width:'10%', height:'3.5%', target:9, hint:'View scorecard — Claude 3.5' },
+    ],
+    8: [ // Screen 9: Risk → Screen 10
+      { top:'2%', left:'83%', width:'12%', height:'5%', target:9, hint:'View scorecard →' },
+    ],
+    9: [ // Screen 10: Scorecard → Screen 13 (approve) or back
+      { top:'72%', left:'68%', width:'25%', height:'6%', target:12, hint:'Approve adoption →' },
+      { top:'79%', left:'68%', width:'12%', height:'5%', target:12, hint:'Delegate to team →' },
+    ],
+    10: [ // Screen 11: Alert → apply (stays) or switching eval
+      { top:'76%', left:'1%', width:'55%', height:'5.5%', target:11, hint:'⚡ Apply recommendation → Switch Eval' },
+      { top:'66%', left:'68%', width:'25%', height:'5%', target:11, hint:'Switching evaluation →' },
+    ],
+    11: [ // Screen 12: Switching Eval → Decision Mode or back
+      { top:'2%', left:'77%', width:'16%', height:'5%', target:6, hint:'Initiate Decision Mode →' },
+      { top:'14%', left:'68%', width:'25%', height:'8%', target:6, hint:'Initiate Decision Mode →' },
+    ],
+    12: [ // Screen 13: Stakeholder → approve (loop back to dashboard)
+      { top:'29%', left:'65%', width:'28%', height:'6.5%', target:5, hint:'✓ Approve → back to dashboard' },
+    ],
+  };
+
+  let current = 0;
+  let hotspotsVisible = false;
+  let minimapOpen = false;
+
+  function goTo(idx) {
+    if (idx < 0 || idx >= screens.length) return;
+
+    // hide current
+    document.getElementById('frame-' + current).classList.remove('active');
+    document.querySelectorAll('.screen-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.minimap-item').forEach(b => b.classList.remove('active'));
+
+    current = idx;
+
+    // show new
+    document.getElementById('frame-' + current).classList.add('active');
+    document.querySelector('[data-screen="' + current + '"]').classList.add('active');
+
+    // update minimap
+    const mmItems = document.querySelectorAll('.minimap-item');
+    if (mmItems[current]) {
+      mmItems[current].classList.add('active');
+      // add group class for colour
+      const g = screens[current].group;
+      if (g === 'onboarding') mmItems[current].classList.add('onboarding');
+      if (g === 'decision') mmItems[current].classList.add('decision');
+      if (g === 'management') mmItems[current].classList.add('management');
+    }
+
+    // counter
+    document.getElementById('screenCounter').textContent = (current + 1) + ' / ' + screens.length;
+
+    // arrows
+    document.getElementById('prevBtn').disabled = current === 0;
+    document.getElementById('nextBtn').disabled = current === screens.length - 1;
+
+    // scroll track btn into view
+    document.querySelector('[data-screen="' + current + '"]').scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+
+    // rebuild hotspots
+    renderHotspots();
+  }
+
+  function next() { goTo(current + 1); }
+  function prev() { goTo(current - 1); }
+
+  function renderHotspots() {
+    const layer = document.getElementById('hotspotLayer');
+    layer.innerHTML = '';
+    const spots = hotspots[current] || [];
+    spots.forEach(s => {
+      const el = document.createElement('div');
+      el.className = 'hotspot';
+      el.style.top = s.top;
+      el.style.left = s.left;
+      el.style.width = s.width;
+      el.style.height = s.height;
+      el.innerHTML = '<div class="hotspot-hint">' + s.hint + '</div>';
+      el.addEventListener('click', () => goTo(s.target));
+      layer.appendChild(el);
+    });
+  }
+
+  function toggleHotspots() {
+    hotspotsVisible = !hotspotsVisible;
+    document.body.classList.toggle('show-hotspots', hotspotsVisible);
+    document.getElementById('hotspotToggle').classList.toggle('on', hotspotsVisible);
+    document.getElementById('hotspotLabel').textContent = hotspotsVisible ? 'Hide hotspots' : 'Show hotspots';
+    document.getElementById('hotspotCtrl').classList.toggle('active', hotspotsVisible);
+  }
+
+  function toggleMinimap() {
+    minimapOpen = !minimapOpen;
+    document.getElementById('minimap').classList.toggle('open', minimapOpen);
+    document.getElementById('minimapCtrl').classList.toggle('active', minimapOpen);
+  }
+
+  // Keyboard navigation — use capture so it works even when focus is inside an iframe
+  window.addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { e.preventDefault(); e.stopPropagation(); next(); return; }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); e.stopPropagation(); prev(); return; }
+    if (e.key === 'm' || e.key === 'M') { e.preventDefault(); e.stopPropagation(); toggleMinimap(); return; }
+    if (e.key === 'h' || e.key === 'H') { e.preventDefault(); e.stopPropagation(); toggleHotspots(); return; }
+    if (e.key === 'f' || e.key === 'F') {
+      e.preventDefault(); e.stopPropagation();
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else document.exitFullscreen();
+      return;
+    }
+    // number keys 1-9 → screens 1-9
+    const n = parseInt(e.key);
+    if (n >= 1 && n <= 9 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); e.stopPropagation(); goTo(n - 1); return; }
+    // 0 → screen 10
+    if (e.key === '0' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); e.stopPropagation(); goTo(9); return; }
+    // Ctrl+1/2/3 → screens 11, 12, 13
+    if (e.ctrlKey && (e.key === '1' || e.key === '2' || e.key === '3')) { e.preventDefault(); e.stopPropagation(); goTo(9 + parseInt(e.key)); return; }
+  }, true);
+
+  // init
+  goTo(0);
+
+  // hide kbd hint after anim
+  setTimeout(() => {
+    const h = document.getElementById('kbdHint');
+    if (h) h.style.display = 'none';
+  }, 6500);
+</script>
+</body>
+</html>
