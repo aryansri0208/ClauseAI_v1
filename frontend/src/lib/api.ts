@@ -132,6 +132,24 @@ export async function connectVendors(
   await Promise.all(connections.map((c) => connectVendor(c, options)));
 }
 
+export async function validateVendorKey(
+  vendor_name: string,
+  api_key: string,
+  options?: RequestInit,
+): Promise<{ valid: boolean; vendor_name: string; error?: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/vendors/validate`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers ?? {}),
+    },
+    body: JSON.stringify({ vendor_name, api_key }),
+    ...options,
+  });
+
+  return handleJsonResponse<{ valid: boolean; vendor_name: string; error?: string }>(response);
+}
+
 /** Fetch company by id (backend may expose GET /api/company/:id) */
 export async function getCompany(
   companyId: string,

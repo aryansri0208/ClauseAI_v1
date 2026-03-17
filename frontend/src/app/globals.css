@@ -1,8 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Design tokens (match screen-01-welcome-connect.html) */
+/*
+ * Tailwind v4 theme — registers custom tokens as utility classes.
+ * e.g. --color-clause-bg → bg-clause-bg, text-clause-bg, etc.
+ */
+@theme {
+  /* Colors */
+  --color-clause-bg: #fbf8f5;
+  --color-clause-surface: #ffffff;
+  --color-clause-surface2: #f0f0f0;
+  --color-clause-border: #dcdcdc;
+  --color-clause-border2: #e8e8e8;
+  --color-clause-accent: #28354a;
+  --color-clause-accent2: #ef876e;
+  --color-clause-accent3: #e06b5d;
+  --color-clause-accent4: #4caf50;
+  --color-clause-warning: #ffb347;
+  --color-clause-text: #333333;
+  --color-clause-text2: #555555;
+  --color-clause-text3: #777777;
+  --color-clause-accent-hover: #3a4a62;
+  --color-clause-connected-border: rgba(0, 255, 148, 0.25);
+  --color-clause-connected-bg: rgba(0, 255, 148, 0.03);
+
+  /* Fonts */
+  --font-display: var(--font-inter), "Inter", sans-serif;
+  --font-mono: var(--font-inter), "Inter", monospace;
+
+  /* Keyframes */
+  @keyframes clause-pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.75); }
+  }
+  @keyframes clause-fade-up {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Animations */
+  --animate-clause-pulse: clause-pulse 2s infinite;
+  --animate-clause-fade-up: clause-fade-up 0.5s ease forwards;
+  --animate-clause-fade-up-delay-1: clause-fade-up 0.5s 0.1s ease forwards;
+  --animate-clause-fade-up-card-1: clause-fade-up 0.35s 0.15s ease forwards;
+  --animate-clause-fade-up-card-2: clause-fade-up 0.35s 0.2s ease forwards;
+  --animate-clause-fade-up-card-3: clause-fade-up 0.35s 0.25s ease forwards;
+  --animate-clause-fade-up-card-4: clause-fade-up 0.35s 0.3s ease forwards;
+  --animate-clause-fade-up-card-5: clause-fade-up 0.35s 0.35s ease forwards;
+}
+
+/* CSS variables (for use in inline styles / non-Tailwind contexts) */
 :root {
   --clause-bg: #fbf8f5;
   --clause-surface: #ffffff;
@@ -27,6 +73,8 @@ body {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--clause-bg);
+  color: var(--clause-text);
 }
 
 /* Subtle grid background */
@@ -41,48 +89,6 @@ body::before {
   background-size: 48px 48px;
   opacity: 0.15;
   z-index: 0;
-}
-
-@keyframes clause-pulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.75); }
-}
-
-@keyframes clause-fade-up {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-clause-pulse {
-  animation: clause-pulse 2s infinite;
-}
-
-.animate-clause-fade-up {
-  animation: clause-fade-up 0.5s ease forwards;
-}
-
-.animate-clause-fade-up-delay-1 {
-  animation: clause-fade-up 0.5s 0.1s ease forwards;
-}
-
-.animate-clause-fade-up-card-1 {
-  animation: clause-fade-up 0.35s 0.15s ease forwards;
-}
-
-.animate-clause-fade-up-card-2 {
-  animation: clause-fade-up 0.35s 0.2s ease forwards;
-}
-
-.animate-clause-fade-up-card-3 {
-  animation: clause-fade-up 0.35s 0.25s ease forwards;
-}
-
-.animate-clause-fade-up-card-4 {
-  animation: clause-fade-up 0.35s 0.3s ease forwards;
-}
-
-.animate-clause-fade-up-card-5 {
-  animation: clause-fade-up 0.35s 0.35s ease forwards;
 }
 
 /* Form fields matching design */
@@ -117,4 +123,3 @@ body::before {
 .field-select:focus {
   border-color: var(--clause-accent);
 }
-

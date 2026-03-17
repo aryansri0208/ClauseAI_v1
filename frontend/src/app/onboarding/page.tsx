@@ -6,222 +6,333 @@ import Link from "next/link";
 import {
   createCompany,
   connectVendor,
+  validateVendorKey,
   ApiError,
-  type ConnectVendorPayload,
   type CreateCompanyPayload,
+  type VendorName,
 } from "@/lib/api";
+
+/* ------------------------------------------------------------------ */
+/*  Options                                                            */
+/* ------------------------------------------------------------------ */
+
+const SIZE_OPTIONS = [
+  "1–50",
+  "51–200",
+  "201–500",
+  "501–2,000 employees",
+  "2,000+",
+];
+
+const AI_USE_CASE_OPTIONS = [
+  "Customer-facing AI (support, chat, search)",
+  "Internal productivity / copilots",
+  "Data analysis + summarisation",
+  "Code generation + dev tools",
+  "Document intelligence",
+  "Multiple / not sure yet",
+];
+
+const ROLE_OPTIONS = [
+  "CTO / Head of Engineering",
+  "Head of AI / ML",
+  "VP Engineering",
+  "Platform Engineer",
+  "ML / AI Engineer",
+];
+
+const SPEND_OPTIONS = [
+  "Under $10k",
+  "$10k – $50k",
+  "$50k – $200k / mo",
+  "$200k+",
+];
+
+const COMPLIANCE_OPTIONS = [
+  "SOC 2 Type II",
+  "HIPAA",
+  "GDPR",
+  "SOC 2 + HIPAA",
+  "None yet / figuring out",
+];
+
+/* ------------------------------------------------------------------ */
+/*  Vendor config                                                      */
+/* ------------------------------------------------------------------ */
+
+type VendorStatus = "idle" | "expanded" | "validating" | "connected" | "error";
+
+interface VendorDef {
+  key: string;
+  apiName: VendorName;
+  displayName: string;
+  desc: string;
+  logoText: string;
+  logoBg: string;
+  logoColor: string;
+  borderColor: string;
+  animClass: string;
+  hint?: string;
+}
+
+const VENDORS: VendorDef[] = [
+  {
+    key: "anthropic",
+    apiName: "Anthropic",
+    displayName: "Anthropic",
+    desc: "Claude models · usage + cost API",
+    logoText: "An",
+    logoBg: "rgba(0,229,255,0.1)",
+    logoColor: "var(--clause-accent)",
+    borderColor: "var(--clause-accent)",
+    animClass: "opacity-0 animate-clause-fade-up-card-1",
+  },
+  {
+    key: "openai",
+    apiName: "OpenAI",
+    displayName: "OpenAI",
+    desc: "GPT models · usage dashboard API",
+    logoText: "OA",
+    logoBg: "rgba(123,97,255,0.1)",
+    logoColor: "var(--clause-accent2)",
+    borderColor: "var(--clause-accent2)",
+    animClass: "opacity-0 animate-clause-fade-up-card-2",
+    hint: "Requires Admin API key from platform.openai.com/settings/organization/admin-keys",
+  },
+  {
+    key: "google",
+    apiName: "Google Vertex AI",
+    displayName: "Google AI / Vertex",
+    desc: "Gemini models · Cloud billing API",
+    logoText: "G",
+    logoBg: "rgba(255,179,71,0.1)",
+    logoColor: "var(--clause-warning)",
+    borderColor: "var(--clause-warning)",
+    animClass: "opacity-0 animate-clause-fade-up-card-3",
+  },
+  {
+    key: "pinecone",
+    apiName: "Pinecone",
+    displayName: "Pinecone",
+    desc: "Vector DB · usage + query metrics",
+    logoText: "Pi",
+    logoBg: "rgba(0,255,148,0.1)",
+    logoColor: "var(--clause-accent4)",
+    borderColor: "var(--clause-accent4)",
+    animClass: "opacity-0 animate-clause-fade-up-card-4",
+  },
+  {
+    key: "langsmith",
+    apiName: "LangSmith",
+    displayName: "LangSmith",
+    desc: "Trace + eval pipeline metrics",
+    logoText: "Ls",
+    logoBg: "rgba(255,107,107,0.1)",
+    logoColor: "var(--clause-accent3)",
+    borderColor: "var(--clause-accent3)",
+    animClass: "opacity-0 animate-clause-fade-up-card-5",
+  },
+];
+
+/* ------------------------------------------------------------------ */
+/*  Normalizers (keep backend compat)                                  */
+/* ------------------------------------------------------------------ */
 
 type Size = "1-10" | "11-50" | "51-200";
 type Compliance = "soc2" | "hipaa" | "gdpr";
 
-function normalizeSize(value: string): Size {
-  const v = value.trim().toLowerCase();
-  if (v === "1-10") return "1-10";
-  if (v === "11-50") return "11-50";
-  if (v === "51-200") return "51-200";
-  if (/^1\s*[-–]\s*10$/.test(v)) return "1-10";
-  if (/^11\s*[-–]\s*50$/.test(v)) return "11-50";
-  if (/^51\s*[-–]\s*200$/.test(v)) return "51-200";
-  if (v.includes("1–50") || v === "1-50") return "1-10";
-  if (
-    v.includes("201") ||
-    v.includes("500") ||
-    v.includes("501") ||
-    v.includes("2000")
-  )
-    return "51-200";
-  return "51-200";
+function normalizeSize(v: string): Size {
+  if (v.includes("2,000") || v.includes("501") || v.includes("201")) return "51-200";
+  if (v.includes("51")) return "11-50";
+  return "1-10";
 }
 
-function normalizeCompliance(value: string): Compliance {
-  const v = value.trim().toLowerCase();
-  if (v === "soc2" || v.includes("soc")) return "soc2";
-  if (v === "hipaa" || v.includes("hipaa")) return "hipaa";
-  if (v === "gdpr" || v.includes("gdpr")) return "gdpr";
-  if (v.includes("none") || v.includes("figuring")) return "gdpr";
+function normalizeCompliance(v: string): Compliance {
+  const l = v.toLowerCase();
+  if (l.includes("soc")) return "soc2";
+  if (l.includes("hipaa")) return "hipaa";
   return "gdpr";
 }
 
-const SIZE_OPTIONS = [
-  { value: "1-10", label: "1–10" },
-  { value: "11-50", label: "11–50" },
-  { value: "51-200", label: "51–200" },
-];
-
-const COMPLIANCE_OPTIONS = [
-  { value: "soc2", label: "SOC 2 Type II" },
-  { value: "hipaa", label: "HIPAA" },
-  { value: "gdpr", label: "GDPR" },
-];
-
-const AI_USE_CASE_OPTIONS = [
-  { value: "customer_support", label: "Customer-facing AI (support, chat, search)" },
-  { value: "internal_productivity", label: "Internal productivity / copilots" },
-  { value: "data_analysis", label: "Data analysis + summarisation" },
-  { value: "dev_tools", label: "Code generation + dev tools" },
-  { value: "document_intelligence", label: "Document intelligence" },
-  { value: "multiple", label: "Multiple / not sure yet" },
-];
-
-const MONTHLY_SPEND_OPTIONS = [
-  { value: "under_10k", label: "Under $10k" },
-  { value: "10k_50k", label: "$10k – $50k" },
-  { value: "50k_200k", label: "$50k – $200k / mo" },
-  { value: "200k_plus", label: "$200k+" },
-];
-
-const VENDOR_STORAGE_KEY = "clause_onboarding_vendor_keys";
-const COMPANY_STORAGE_KEY = "clause_onboarding_company_id";
-
-export function storeOnboardingKeysForAnalysis(companyId: string, keys: { openaiKey?: string; anthropicKey?: string; vertexKey?: string }) {
-  if (typeof sessionStorage === "undefined") return;
-  sessionStorage.setItem(COMPANY_STORAGE_KEY, companyId);
-  sessionStorage.setItem(VENDOR_STORAGE_KEY, JSON.stringify(keys));
-}
-
-export function getOnboardingKeysForAnalysis(): { companyId: string | null; keys: { openaiKey?: string; anthropicKey?: string; vertexKey?: string } } {
-  if (typeof sessionStorage === "undefined") return { companyId: null, keys: {} };
-  const companyId = sessionStorage.getItem(COMPANY_STORAGE_KEY);
-  const raw = sessionStorage.getItem(VENDOR_STORAGE_KEY);
-  let keys: { openaiKey?: string; anthropicKey?: string; vertexKey?: string } = {};
-  try {
-    if (raw) keys = JSON.parse(raw);
-  } catch {
-    // ignore
-  }
-  return { companyId, keys };
-}
+/* ------------------------------------------------------------------ */
+/*  Page                                                               */
+/* ------------------------------------------------------------------ */
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [name, setName] = useState("");
-  const [size, setSize] = useState<string>("51-200");
-  const [monthlySpend, setMonthlySpend] = useState("50k_200k");
-  const [aiUseCase, setAiUseCase] = useState("multiple");
-  const [compliance, setCompliance] = useState<string>("soc2");
-  const [openaiKey, setOpenaiKey] = useState("");
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [vertexKey, setVertexKey] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const trimmedName = name.trim();
-    if (!trimmedName) {
-      setError("Company name is required.");
+  // Company form
+  const [companyName, setCompanyName] = useState("");
+  const [size, setSize] = useState(SIZE_OPTIONS[3]);
+  const [useCase, setUseCase] = useState(AI_USE_CASE_OPTIONS[0]);
+  const [role, setRole] = useState(ROLE_OPTIONS[0]);
+  const [spend, setSpend] = useState(SPEND_OPTIONS[2]);
+  const [compliance, setCompliance] = useState(COMPLIANCE_OPTIONS[0]);
+
+  // Vendor state
+  const [vendorStates, setVendorStates] = useState<
+    Record<string, { status: VendorStatus; apiKey: string; error?: string }>
+  >(() =>
+    Object.fromEntries(
+      VENDORS.map((v) => [v.key, { status: "idle" as VendorStatus, apiKey: "" }]),
+    ),
+  );
+
+  // Submit
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const connectedCount = Object.values(vendorStates).filter(
+    (s) => s.status === "connected",
+  ).length;
+
+  function updateVendor(
+    key: string,
+    patch: Partial<{ status: VendorStatus; apiKey: string; error?: string }>,
+  ) {
+    setVendorStates((prev) => ({
+      ...prev,
+      [key]: { ...prev[key], ...patch },
+    }));
+  }
+
+  async function handleValidateAndConnect(vendor: VendorDef) {
+    const state = vendorStates[vendor.key];
+    const trimmedKey = state.apiKey.trim();
+    if (!trimmedKey) {
+      updateVendor(vendor.key, { error: "API key is required", status: "error" });
       return;
     }
 
-    setLoading(true);
+    updateVendor(vendor.key, { status: "validating", error: undefined });
+
     try {
-      const payload: CreateCompanyPayload = {
-        name: trimmedName,
-        size: normalizeSize(size),
-        ai_use_case: aiUseCase || "multiple",
-        monthly_ai_spend_estimate: monthlySpend || "50k_200k",
-        compliance_requirement: normalizeCompliance(compliance),
-      };
-      const { id: companyId } = await createCompany(payload);
-
-      const connections: ConnectVendorPayload[] = [];
-      if (openaiKey.trim())
-        connections.push({
-          company_id: companyId,
-          vendor_name: "OpenAI",
-          api_key: openaiKey.trim(),
+      const validation = await validateVendorKey(vendor.apiName, trimmedKey);
+      if (!validation.valid) {
+        updateVendor(vendor.key, {
+          status: "error",
+          error: validation.error || "Invalid API key",
         });
-      if (anthropicKey.trim())
-        connections.push({
-          company_id: companyId,
-          vendor_name: "Anthropic",
-          api_key: anthropicKey.trim(),
-        });
-      if (vertexKey.trim())
-        connections.push({
-          company_id: companyId,
-          vendor_name: "Google Vertex AI",
-          api_key: vertexKey.trim(),
-        });
-
-      if (connections.length > 0) {
-        const results = await Promise.allSettled(
-          connections.map((c) => connectVendor(c))
-        );
-        const errors: string[] = [];
-        results.forEach((result, i) => {
-          if (result.status === "rejected") {
-            const msg =
-              result.reason instanceof ApiError
-                ? result.reason.message
-                : result.reason instanceof Error
-                  ? result.reason.message
-                  : "Connection failed";
-            errors.push(`${connections[i].vendor_name}: ${msg}`);
-          }
-        });
-        if (errors.length > 0) {
-          setError(errors.join(" "));
-          setLoading(false);
-          return;
-        }
+        return;
       }
 
-      storeOnboardingKeysForAnalysis(companyId, {
-        openaiKey: openaiKey.trim() || undefined,
-        anthropicKey: anthropicKey.trim() || undefined,
-        vertexKey: vertexKey.trim() || undefined,
-      });
-      router.push(`/analysis?company=${encodeURIComponent(companyId)}`);
+      updateVendor(vendor.key, { status: "connected", error: undefined });
     } catch (err) {
-      const message =
+      const msg =
         err instanceof ApiError
           ? err.message
           : err instanceof Error
             ? err.message
-            : "Something went wrong. Please try again.";
-      setError(message);
-    } finally {
-      setLoading(false);
+            : "Validation failed";
+      updateVendor(vendor.key, { status: "error", error: msg });
     }
   }
 
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setSubmitError(null);
+    const trimmedName = companyName.trim();
+    if (!trimmedName) {
+      setSubmitError("Company name is required.");
+      return;
+    }
+    if (connectedCount === 0) {
+      setSubmitError("Connect at least one vendor to continue.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const payload: CreateCompanyPayload = {
+        name: trimmedName,
+        size: normalizeSize(size),
+        ai_use_case: useCase,
+        monthly_ai_spend_estimate: spend,
+        compliance_requirement: normalizeCompliance(compliance),
+      };
+      const { id: companyId } = await createCompany(payload);
+
+      const vendorsToConnect = VENDORS.filter(
+        (v) => vendorStates[v.key].status === "connected",
+      );
+      await Promise.all(
+        vendorsToConnect.map((v) =>
+          connectVendor({
+            vendor_name: v.apiName,
+            api_key: vendorStates[v.key].apiKey.trim(),
+            company_id: companyId,
+          }),
+        ),
+      );
+
+      router.push(`/onboarding/scan?company=${encodeURIComponent(companyId)}`);
+    } catch (err) {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : err instanceof Error
+            ? err.message
+            : "Something went wrong.";
+      setSubmitError(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  const STEPS = ["Connect", "Scan", "Confirm", "Baseline", "Insights"];
+
   return (
-    <main className="relative z-10 flex min-h-screen flex-col">
-      <header className="flex h-[52px] items-center border-b border-clause-border bg-clause-surface px-7">
-        <Link href="/" className="flex items-center gap-2 font-display text-base font-extrabold tracking-tight text-clause-accent">
-          <div className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-clause-accent text-[10px] font-bold text-white">
+    <main className="relative z-[1] flex min-h-screen flex-col">
+      {/* ===== TOP BAR ===== */}
+      <header className="flex h-[52px] shrink-0 items-center border-b border-clause-border bg-clause-surface px-7">
+        <Link
+          href="/"
+          className="flex items-center gap-2 text-base font-extrabold tracking-tight text-clause-accent"
+        >
+          <span className="flex h-[26px] w-[26px] items-center justify-center rounded-md bg-clause-accent text-[10px] font-bold text-white">
             C/
-          </div>
+          </span>
           Clause<span className="text-clause-accent">AI</span>
         </Link>
-        <div className="ml-7 flex items-center">
-          <Step active label="Connect" step={1} />
-          <StepDiv />
-          <Step label="Scan" step={2} />
-          <StepDiv />
-          <Step label="Confirm" step={3} />
-          <StepDiv />
-          <Step label="Baseline" step={4} />
-          <StepDiv />
-          <Step label="Insights" step={5} />
-        </div>
+        <nav className="ml-7 flex items-center">
+          {STEPS.map((label, i) => (
+            <div key={label} className="flex items-center">
+              {i > 0 && <div className="mx-1 h-px w-5 bg-clause-border2" />}
+              <div
+                className={`flex items-center gap-[7px] px-3 font-mono text-[11px] ${
+                  i === 0 ? "text-clause-text" : "text-clause-text3"
+                }`}
+              >
+                <span
+                  className={`flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-full border text-[9px] ${
+                    i === 0
+                      ? "border-clause-accent bg-clause-accent text-white"
+                      : "border-current"
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                {label}
+              </div>
+            </div>
+          ))}
+        </nav>
       </header>
 
       <div className="grid flex-1 grid-cols-1 lg:grid-cols-2">
-        <div className="flex flex-col justify-center gap-8 border-clause-border px-10 py-12 lg:border-r lg:px-14 lg:py-[52px] animate-clause-fade-up">
+        {/* ===== LEFT PANEL ===== */}
+        <div className="flex flex-col justify-center gap-8 border-clause-border py-[52px] px-[56px] lg:border-r animate-clause-fade-up">
           <div>
             <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[2px] text-clause-accent">
               <span className="h-1.5 w-1.5 rounded-full bg-clause-accent animate-clause-pulse" />
               Getting started
             </div>
-            <h1 className="mt-3 font-display text-[36px] font-extrabold leading-tight tracking-tight">
+            <h1 className="mt-3 font-display text-[36px] font-extrabold leading-[1.1] tracking-[-1.2px]">
               Welcome to
               <br />
               Clause<span className="text-clause-accent">AI</span>
             </h1>
-            <p className="mt-3.5 max-w-[400px] text-sm font-light leading-relaxed text-clause-text2">
+            <p className="mt-3.5 max-w-[400px] text-[14px] font-light leading-[1.7] text-clause-text2">
               Tell us a little about your organisation. ClauseAI will use this to
               personalise your baseline and surface the most relevant insights
               from day one.
@@ -229,88 +340,100 @@ export default function OnboardingPage() {
           </div>
 
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field
-                label="Company name"
-                required
-                value={name}
-                onChange={setName}
-                placeholder="Acme Corp"
-              />
+            {/* Row 1: Company name + size */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Company name">
+                <input
+                  type="text"
+                  value={companyName}
+                  onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Acme Corp"
+                  className="field-input w-full"
+                />
+              </Field>
               <Field label="Company size">
                 <select
                   value={size}
                   onChange={(e) => setSize(e.target.value)}
-                  className="field-select"
+                  className="field-select w-full"
                 >
                   {SIZE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
+                    <option key={o}>{o}</option>
                   ))}
                 </select>
               </Field>
             </div>
 
+            {/* AI use case — full width */}
             <Field label="Primary AI use case">
               <select
-                value={aiUseCase}
-                onChange={(e) => setAiUseCase(e.target.value)}
-                className="field-select"
+                value={useCase}
+                onChange={(e) => setUseCase(e.target.value)}
+                className="field-select w-full"
               >
                 {AI_USE_CASE_OPTIONS.map((o) => (
-                  <option key={o.value} value={o.value}>
-                    {o.label}
-                  </option>
+                  <option key={o}>{o}</option>
                 ))}
               </select>
             </Field>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <Field label="Est. monthly AI spend">
+            {/* Row 2: Role + Spend */}
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Your role">
                 <select
-                  value={monthlySpend}
-                  onChange={(e) => setMonthlySpend(e.target.value)}
-                  className="field-select"
+                  value={role}
+                  onChange={(e) => setRole(e.target.value)}
+                  className="field-select w-full"
                 >
-                  {MONTHLY_SPEND_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
+                  {ROLE_OPTIONS.map((o) => (
+                    <option key={o}>{o}</option>
                   ))}
                 </select>
               </Field>
-              <Field label="Primary compliance requirement">
+              <Field label="Est. monthly AI spend">
                 <select
-                  value={compliance}
-                  onChange={(e) => setCompliance(e.target.value)}
-                  className="field-select"
+                  value={spend}
+                  onChange={(e) => setSpend(e.target.value)}
+                  className="field-select w-full"
                 >
-                  {COMPLIANCE_OPTIONS.map((o) => (
-                    <option key={o.value} value={o.value}>
-                      {o.label}
-                    </option>
+                  {SPEND_OPTIONS.map((o) => (
+                    <option key={o}>{o}</option>
                   ))}
                 </select>
               </Field>
             </div>
 
-            {error && (
+            {/* Compliance — full width */}
+            <Field label="Primary compliance requirement">
+              <select
+                value={compliance}
+                onChange={(e) => setCompliance(e.target.value)}
+                className="field-select w-full"
+              >
+                {COMPLIANCE_OPTIONS.map((o) => (
+                  <option key={o}>{o}</option>
+                ))}
+              </select>
+            </Field>
+
+            {submitError && (
               <div
-                className="mt-2 rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800"
+                className="rounded-md border border-red-200 bg-red-50 px-3.5 py-2.5 text-sm text-red-800"
                 role="alert"
               >
-                {error}
+                {submitError}
               </div>
             )}
 
-            <div className="flex flex-col gap-2.5">
+            <div className="flex flex-col gap-2.5 pt-2">
               <button
                 type="submit"
-                disabled={loading}
-                className="flex items-center justify-center gap-2 rounded-lg bg-clause-accent px-4 py-3.5 text-sm font-semibold text-white transition-colors hover:bg-[var(--clause-accent-hover)] disabled:cursor-not-allowed disabled:opacity-60"
+                disabled={submitting || connectedCount === 0}
+                className="flex items-center justify-center gap-2 rounded-lg bg-clause-accent px-4 py-3.5 text-[14px] font-semibold text-white transition-colors hover:bg-[var(--clause-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                {loading ? "Connecting..." : "Continue to connect vendors →"}
+                {submitting
+                  ? "Setting up..."
+                  : `Continue to scan →`}
               </button>
               <p className="text-center font-mono text-xs text-clause-text3">
                 Already using ClauseAI?{" "}
@@ -322,12 +445,13 @@ export default function OnboardingPage() {
           </form>
         </div>
 
-        <div className="flex flex-col justify-center gap-7 px-8 py-12 lg:px-12 lg:py-[52px] opacity-0 animate-clause-fade-up-delay-1">
+        {/* ===== RIGHT PANEL ===== */}
+        <div className="flex flex-col justify-center gap-7 py-[52px] px-[48px] opacity-0 animate-clause-fade-up-delay-1">
           <div>
-            <h2 className="font-display text-lg font-bold tracking-tight">
+            <h2 className="font-display text-[18px] font-bold tracking-[-0.4px]">
               Connect your AI vendors
             </h2>
-            <p className="mt-1.5 text-sm font-light leading-relaxed text-clause-text2">
+            <p className="mt-1.5 text-[13px] font-light leading-[1.6] text-clause-text2">
               ClauseAI will connect to your vendor analytics APIs to auto-discover
               systems, spend, and usage. We only read telemetry — we never modify
               your AI systems. Connect as many as you use.
@@ -335,48 +459,31 @@ export default function OnboardingPage() {
           </div>
 
           <div className="flex flex-col gap-2.5">
-            <VendorCard
-              vendorKey="anthropic"
-              name="Anthropic"
-              desc="Claude models · usage + cost API"
-              logoBg="bg-[rgba(0,229,255,0.1)]"
-              logoColor="text-clause-accent"
-              logoText="An"
-              value={anthropicKey}
-              onChange={setAnthropicKey}
-              className="animate-clause-fade-up-card-1 opacity-0"
-            />
-            <VendorCard
-              vendorKey="openai"
-              name="OpenAI"
-              desc="GPT models · usage dashboard API"
-              logoBg="bg-[rgba(123,97,255,0.1)]"
-              logoColor="text-clause-accent2"
-              logoText="OA"
-              value={openaiKey}
-              onChange={setOpenaiKey}
-              className="animate-clause-fade-up-card-2 opacity-0"
-            />
-            <VendorCard
-              vendorKey="google"
-              name="Google AI / Vertex"
-              desc="Gemini models · Cloud billing API"
-              logoBg="bg-[rgba(255,179,71,0.1)]"
-              logoColor="text-clause-warning"
-              logoText="G"
-              value={vertexKey}
-              onChange={setVertexKey}
-              className="animate-clause-fade-up-card-3 opacity-0"
-            />
+            {VENDORS.map((vendor) => (
+              <VendorCard
+                key={vendor.key}
+                vendor={vendor}
+                state={vendorStates[vendor.key]}
+                onUpdate={(patch) => updateVendor(vendor.key, patch)}
+                onValidate={() => handleValidateAndConnect(vendor)}
+                className={vendor.animClass}
+              />
+            ))}
           </div>
 
-          <p className="font-mono text-xs text-clause-text3">
-            <span>Missing a vendor?</span>{" "}
-            <button type="button" className="text-clause-text2 underline decoration-clause-text3">
+          <p className="flex items-center gap-2 font-mono text-xs text-clause-text3">
+            <span>Missing a vendor?</span>
+            <button
+              type="button"
+              className="text-clause-text2 underline decoration-clause-text3"
+            >
               Add via API key manually
             </button>
-            {" · "}
-            <button type="button" className="text-clause-text2 underline decoration-clause-text3">
+            <span>·</span>
+            <button
+              type="button"
+              className="text-clause-text2 underline decoration-clause-text3"
+            >
               Skip for now
             </button>
           </p>
@@ -386,126 +493,123 @@ export default function OnboardingPage() {
   );
 }
 
-function Step({
-  active,
-  label,
-  step,
-}: {
-  active?: boolean;
-  label: string;
-  step: number;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-[7px] px-3 py-0 font-mono text-[11px] ${
-        active ? "text-clause-text" : "text-clause-text3"
-      }`}
-    >
-      <span
-        className={`flex h-[18px] w-[18px] flex-shrink-0 items-center justify-center rounded-full border text-[9px] ${
-          active
-            ? "border-clause-accent bg-clause-accent text-white"
-            : "border-current"
-        }`}
-      >
-        {step}
-      </span>
-      {label}
-    </div>
-  );
-}
-
-function StepDiv() {
-  return <div className="h-px w-5 bg-clause-border2" />;
-}
+/* ------------------------------------------------------------------ */
+/*  Field                                                              */
+/* ------------------------------------------------------------------ */
 
 function Field({
   label,
   children,
-  required,
-  value,
-  onChange,
-  placeholder,
 }: {
   label: string;
-  children?: React.ReactNode;
-  required?: boolean;
-  value?: string;
-  onChange?: (v: string) => void;
-  placeholder?: string;
+  children: React.ReactNode;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="font-mono text-[9px] uppercase tracking-wider text-clause-text3">
+      <label className="font-mono text-[9px] uppercase tracking-[1px] text-clause-text3">
         {label}
-        {required && " *"}
       </label>
-      {children ?? (
-        <input
-          type="text"
-          value={value ?? ""}
-          onChange={(e) => onChange?.(e.target.value)}
-          placeholder={placeholder}
-          className="field-input"
-        />
-      )}
+      {children}
     </div>
   );
 }
 
+/* ------------------------------------------------------------------ */
+/*  VendorCard                                                         */
+/* ------------------------------------------------------------------ */
+
 function VendorCard({
-  vendorKey,
-  name,
-  desc,
-  logoBg,
-  logoColor,
-  logoText,
-  value,
-  onChange,
+  vendor,
+  state,
+  onUpdate,
+  onValidate,
   className,
 }: {
-  vendorKey: string;
-  name: string;
-  desc: string;
-  logoBg: string;
-  logoColor: string;
-  logoText: string;
-  value: string;
-  onChange: (v: string) => void;
+  vendor: VendorDef;
+  state: { status: VendorStatus; apiKey: string; error?: string };
+  onUpdate: (patch: Partial<{ status: VendorStatus; apiKey: string; error?: string }>) => void;
+  onValidate: () => void;
   className?: string;
 }) {
+  const isConnected = state.status === "connected";
+  const isExpanded = state.status === "expanded" || state.status === "validating" || state.status === "error";
+
   return (
     <div
-      className={`flex items-center gap-3.5 overflow-hidden rounded-lg border border-clause-border bg-clause-surface px-4 py-3.5 transition-colors hover:border-clause-border2 hover:bg-clause-surface2 ${className ?? ""}`}
-      style={{
-        borderLeftWidth: "3px",
-        borderLeftColor:
-          vendorKey === "openai"
-            ? "var(--clause-accent2)"
-            : vendorKey === "anthropic"
-              ? "var(--clause-accent)"
-              : "var(--clause-warning)",
-      }}
+      className={`relative overflow-hidden rounded-[9px] border bg-clause-surface transition-all ${
+        isConnected
+          ? "border-[var(--clause-connected-border)] bg-[var(--clause-connected-bg)]"
+          : "border-clause-border hover:border-clause-border2 hover:bg-clause-surface2"
+      } ${className ?? ""}`}
+      style={{ borderLeftWidth: "3px", borderLeftColor: vendor.borderColor }}
     >
-      <div
-        className={`flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-md font-mono text-[13px] font-bold ${logoBg} ${logoColor}`}
-      >
-        {logoText}
-      </div>
-      <div className="min-w-0 flex-1">
-        <div className="text-[13px] font-medium">{name}</div>
-        <div className="font-mono text-[11px] text-clause-text3 mt-0.5">
-          {desc}
+      {/* Top row: logo + info + action */}
+      <div className="flex items-center gap-3.5 px-4 py-3.5">
+        <div
+          className="flex h-[34px] w-[34px] flex-shrink-0 items-center justify-center rounded-[7px] font-mono text-[13px] font-bold"
+          style={{ background: vendor.logoBg, color: vendor.logoColor }}
+        >
+          {vendor.logoText}
         </div>
-        <input
-          type="password"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder="API key (optional)"
-          autoComplete="off"
-          className="field-input mt-2 w-full"
-        />
+        <div className="min-w-0 flex-1">
+          <div className="text-[13px] font-medium">{vendor.displayName}</div>
+          <div className="mt-0.5 font-mono text-[11px] text-clause-text3">
+            {vendor.desc}
+          </div>
+        </div>
+        {isConnected ? (
+          <span className="flex-shrink-0 rounded border border-[var(--clause-connected-border)] bg-[rgba(0,255,148,0.06)] px-2.5 py-1 font-mono text-[10px] text-clause-accent4">
+            Connected ✓
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() =>
+              onUpdate({
+                status: isExpanded ? "idle" : "expanded",
+                error: undefined,
+              })
+            }
+            className="flex-shrink-0 cursor-pointer rounded border border-clause-border2 bg-transparent px-2.5 py-1 font-mono text-[10px] text-clause-text3 transition-colors hover:border-clause-accent hover:text-clause-accent"
+          >
+            {isExpanded ? "Cancel" : "Connect"}
+          </button>
+        )}
       </div>
+
+      {/* Expanded: key input + validate */}
+      {isExpanded && (
+        <div className="border-t border-clause-border px-4 pb-3.5 pt-3">
+          {vendor.hint && (
+            <p className="mb-2 rounded bg-[var(--clause-surface2)] px-2.5 py-1.5 font-mono text-[10px] leading-[1.5] text-clause-text3">
+              {vendor.hint}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <input
+              type="password"
+              value={state.apiKey}
+              onChange={(e) => onUpdate({ apiKey: e.target.value, error: undefined })}
+              placeholder="Paste API key"
+              autoComplete="off"
+              className="field-input min-w-0 flex-1"
+            />
+            <button
+              type="button"
+              disabled={state.status === "validating" || !state.apiKey.trim()}
+              onClick={onValidate}
+              className="flex-shrink-0 rounded-[7px] bg-clause-accent px-3.5 py-2 text-[12px] font-semibold text-white transition-colors hover:bg-[var(--clause-accent-hover)] disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {state.status === "validating" ? "Validating..." : "Validate & Connect"}
+            </button>
+          </div>
+          {state.error && (
+            <p className="mt-2 font-mono text-[11px] text-red-600">
+              {state.error}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }

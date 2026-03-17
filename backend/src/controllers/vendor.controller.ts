@@ -1,4 +1,4 @@
-import { Response } from 'express';
+import { Request, Response } from 'express';
 import { getSupabaseAdmin } from '../config/supabase';
 import { encrypt } from '../utils/encryption';
 import { AuthenticatedRequest } from '../middleware/auth.middleware';
@@ -46,7 +46,7 @@ const KEY_VALIDATORS: Record<string, (key: string) => Promise<boolean>> = {
 };
 
 export async function validateVendorKey(
-  req: AuthenticatedRequest,
+  req: Request,
   res: Response,
 ): Promise<void> {
   const { vendor_name, api_key } = req.body as { vendor_name: string; api_key: string };

@@ -20,7 +20,7 @@ const validateVendorSchema = z.object({
 });
 
 const router = Router();
-router.post('/validate', authMiddleware, validate(validateVendorSchema), validateVendorKey);
+router.post('/validate', validate(validateVendorSchema), validateVendorKey);
 router.post('/connect', authMiddleware, validate(connectVendorSchema), connectVendor);
 
 export default router;
