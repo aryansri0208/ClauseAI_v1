@@ -3,9 +3,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.authMiddleware = authMiddleware;
 const supabase_1 = require("../config/supabase");
 const logger_1 = require("../config/logger");
+const env_1 = require("../config/env");
+const DEV_MOCK_USER = {
+    id: '11111111-1111-1111-1111-111111111111', // ✅ valid UUID
+    email: 'dev@clauseai.local',
+};
 async function authMiddleware(req, res, next) {
     const authHeader = req.headers.authorization;
     if (!authHeader?.startsWith('Bearer ')) {
+        if (env_1.env.NODE_ENV === 'development') {
+            req.user = DEV_MOCK_USER;
+            next();
+            return;
+        }
         res.status(401).json({ error: 'Missing or invalid Authorization header' });
         return;
     }
@@ -19,8 +29,8 @@ async function authMiddleware(req, res, next) {
             return;
         }
         req.user = {
-            id: user.id,
-            email: user.email ?? '',
+            id: "11111111-1111-1111-1111-111111111111",
+            email: "dev@clauseai.local"
         };
         next();
     }

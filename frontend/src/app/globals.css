@@ -1,0 +1,120 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens (match screen-01-welcome-connect.html) */
+:root {
+  --clause-bg: #fbf8f5;
+  --clause-surface: #ffffff;
+  --clause-surface2: #f0f0f0;
+  --clause-border: #dcdcdc;
+  --clause-border2: #e8e8e8;
+  --clause-accent: #28354a;
+  --clause-accent2: #ef876e;
+  --clause-accent3: #e06b5d;
+  --clause-accent4: #4caf50;
+  --clause-warning: #ffb347;
+  --clause-text: #333333;
+  --clause-text2: #555555;
+  --clause-text3: #777777;
+  --clause-accent-hover: #3a4a62;
+  --clause-connected-border: rgba(0, 255, 148, 0.25);
+  --clause-connected-bg: rgba(0, 255, 148, 0.03);
+}
+
+body {
+  font-family: var(--font-inter), Inter, ui-sans-serif, system-ui, sans-serif;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Subtle grid background */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(var(--clause-border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--clause-border) 1px, transparent 1px);
+  background-size: 48px 48px;
+  opacity: 0.15;
+  z-index: 0;
+}
+
+@keyframes clause-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes clause-fade-up {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-clause-pulse {
+  animation: clause-pulse 2s infinite;
+}
+
+.animate-clause-fade-up {
+  animation: clause-fade-up 0.5s ease forwards;
+}
+
+.animate-clause-fade-up-delay-1 {
+  animation: clause-fade-up 0.5s 0.1s ease forwards;
+}
+
+.animate-clause-fade-up-card-1 {
+  animation: clause-fade-up 0.35s 0.15s ease forwards;
+}
+
+.animate-clause-fade-up-card-2 {
+  animation: clause-fade-up 0.35s 0.2s ease forwards;
+}
+
+.animate-clause-fade-up-card-3 {
+  animation: clause-fade-up 0.35s 0.25s ease forwards;
+}
+
+.animate-clause-fade-up-card-4 {
+  animation: clause-fade-up 0.35s 0.3s ease forwards;
+}
+
+.animate-clause-fade-up-card-5 {
+  animation: clause-fade-up 0.35s 0.35s ease forwards;
+}
+
+/* Form fields matching design */
+.field-input {
+  background: var(--clause-surface);
+  border: 1px solid var(--clause-border);
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--clause-text);
+  outline: none;
+  transition: border-color 0.15s;
+}
+.field-input:focus {
+  border-color: var(--clause-accent);
+}
+.field-input::placeholder {
+  color: var(--clause-text3);
+}
+
+.field-select {
+  background: var(--clause-surface);
+  border: 1px solid var(--clause-border);
+  border-radius: 7px;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: var(--clause-text2);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+.field-select:focus {
+  border-color: var(--clause-accent);
+}
+

@@ -6,8 +6,11 @@ const auth_middleware_1 = require("../middleware/auth.middleware");
 const validation_middleware_1 = require("../middleware/validation.middleware");
 const vendor_controller_1 = require("../controllers/vendor.controller");
 const connectVendorSchema = zod_1.z.object({
-    vendor_name: zod_1.z.enum(['OpenAI', 'Anthropic', 'Google Vertex AI', 'Pinecone', 'LangSmith']),
-    api_key: zod_1.z.string().min(1),
+    vendor_name: zod_1.z.enum(['OpenAI', 'Anthropic', 'Google Vertex AI', 'Pinecone', 'LangSmith'], {
+        errorMap: () => ({ message: 'vendor_name must be one of: OpenAI, Anthropic, Google Vertex AI, Pinecone, LangSmith' }),
+    }),
+    api_key: zod_1.z.string().min(1, 'api_key is required and must be non-empty'),
+    company_id: zod_1.z.string().uuid('company_id must be a valid UUID').optional(),
 });
 const router = (0, express_1.Router)();
 router.post('/connect', auth_middleware_1.authMiddleware, (0, validation_middleware_1.validate)(connectVendorSchema), vendor_controller_1.connectVendor);

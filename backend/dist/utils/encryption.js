@@ -12,12 +12,13 @@ const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 16;
 const TAG_LENGTH = 16;
 const KEY_LENGTH = 32;
+/** Derive a 32-byte key from API_KEY_SECRET for AES-256-GCM. */
 function getKey() {
-    const keyHex = env_1.env.ENCRYPTION_KEY;
-    if (!keyHex || keyHex.length !== 64 || !/^[0-9a-fA-F]+$/.test(keyHex)) {
-        throw new Error('ENCRYPTION_KEY must be a 32-byte hex string (64 chars)');
+    const secret = env_1.env.API_KEY_SECRET;
+    if (!secret || secret.length < 32) {
+        throw new Error('API_KEY_SECRET is missing or invalid. Set a secure environment variable with at least 32 characters.');
     }
-    return Buffer.from(keyHex, 'hex');
+    return crypto_1.default.createHash('sha256').update(secret, 'utf8').digest();
 }
 function encrypt(plaintext) {
     const key = getKey();

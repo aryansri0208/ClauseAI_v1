@@ -19,6 +19,7 @@ export interface VendorConnectionRow {
   encrypted_api_key: string;
   connection_status: 'active' | 'failed' | 'revoked';
   created_at: string;
+  updated_at: string;
 }
 
 export interface NormalizedVendorUsage {

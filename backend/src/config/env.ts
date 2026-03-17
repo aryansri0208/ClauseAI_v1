@@ -23,7 +23,19 @@ export const env = {
 
   REDIS_URL: getEnv('REDIS_URL', 'redis://localhost:6379'),
 
-  ENCRYPTION_KEY: getEnv('ENCRYPTION_KEY'),
+  /** Used for AES-256-GCM encryption of vendor API keys (min 32 chars). */
+  API_KEY_SECRET: ((): string => {
+    const v = process.env.API_KEY_SECRET ?? '';
+    if (!v || v.length < 32) {
+      throw new Error(
+        'API_KEY_SECRET is missing or invalid. Set a secure environment variable with at least 32 characters.'
+      );
+    }
+    return v;
+  })(),
+
+  /** @deprecated Prefer API_KEY_SECRET for vendor keys. Kept for backward compatibility. */
+  ENCRYPTION_KEY: getEnvOptional('ENCRYPTION_KEY'),
 
   AWS_REGION: getEnvOptional('AWS_REGION') ?? 'us-east-1',
   AWS_ACCESS_KEY_ID: getEnvOptional('AWS_ACCESS_KEY_ID'),

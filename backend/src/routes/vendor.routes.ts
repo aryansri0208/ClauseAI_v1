@@ -5,8 +5,11 @@ import { validate } from '../middleware/validation.middleware';
 import { connectVendor } from '../controllers/vendor.controller';
 
 const connectVendorSchema = z.object({
-  vendor_name: z.enum(['OpenAI', 'Anthropic', 'Google Vertex AI', 'Pinecone', 'LangSmith']),
-  api_key: z.string().min(1),
+  vendor_name: z.enum(['OpenAI', 'Anthropic', 'Google Vertex AI', 'Pinecone', 'LangSmith'], {
+    errorMap: () => ({ message: 'vendor_name must be one of: OpenAI, Anthropic, Google Vertex AI, Pinecone, LangSmith' }),
+  }),
+  api_key: z.string().min(1, 'api_key is required and must be non-empty'),
+  company_id: z.string().uuid('company_id must be a valid UUID').optional(),
 });
 
 const router = Router();
