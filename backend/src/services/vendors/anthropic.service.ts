@@ -4,25 +4,55 @@ export interface AnthropicServiceConfig {
   apiKey: string;
 }
 
-export async function fetchUsage(_config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['usage']> {
-  // Stub: call Anthropic usage API
-  return [
-    { modelOrResource: 'claude-3-5-sonnet', usageAmount: 2000000, unit: 'tokens' },
-    { modelOrResource: 'claude-3-opus', usageAmount: 500000, unit: 'tokens' },
-  ];
+const ANTHROPIC_API = 'https://api.anthropic.com/v1';
+
+function authHeaders(apiKey: string): Record<string, string> {
+  return {
+    'x-api-key': apiKey,
+    'anthropic-version': '2023-06-01',
+  };
 }
 
-export async function fetchProjects(_config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['projects']> {
-  return [
-    { id: 'ws-1', name: 'Platform' },
-    { id: 'ws-2', name: 'ML Team' },
-  ];
+export async function fetchUsage(config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['usage']> {
+  const res = await fetch(`${ANTHROPIC_API}/models`, {
+    headers: authHeaders(config.apiKey),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Anthropic API ${res.status}: ${body}`);
+  }
+
+  const data = await res.json();
+  return (data.data ?? []).map((m: any) => ({
+    modelOrResource: m.id,
+    usageAmount: undefined,
+    unit: 'tokens',
+  }));
 }
 
-export async function fetchCostMetrics(config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['costMetrics']> {
-  const usage = await fetchUsage(config);
-  const amount = usage.length * 10000;
-  return [{ amount, currency: 'USD', period: 'month' }];
+export async function fetchProjects(config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['projects']> {
+  try {
+    const res = await fetch(`${ANTHROPIC_API}/organizations/workspaces`, {
+      headers: authHeaders(config.apiKey),
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      return (data.data ?? []).map((w: any) => ({
+        id: w.id,
+        name: w.display_name ?? w.name,
+      }));
+    }
+  } catch {
+    // Non-admin key or network issue — fall through to default
+  }
+
+  return [{ id: 'default', name: 'Default Workspace' }];
+}
+
+export async function fetchCostMetrics(_config: AnthropicServiceConfig): Promise<NormalizedVendorUsage['costMetrics']> {
+  return [];
 }
 
 export async function getNormalizedUsage(config: AnthropicServiceConfig): Promise<NormalizedVendorUsage> {

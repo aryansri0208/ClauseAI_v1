@@ -21,7 +21,7 @@ export async function listSystems(req: AuthenticatedRequest, res: Response): Pro
   const { data: systems, error } = await supabase
     .from('ai_systems')
     .select(
-      'id, name, vendor, system_type, team_owner, environment, monthly_cost_estimate, created_at'
+      'id, name, vendor, system_type, team_owner, environment, monthly_cost_estimate, primary_model, usage_amount, usage_unit, created_at'
     )
     .eq('company_id', company.id)
     .order('created_at', { ascending: false });
@@ -139,7 +139,7 @@ export async function updateSystem(req: AuthenticatedRequest, res: Response): Pr
 
   const { data: updated } = await supabase
     .from('ai_systems')
-    .select('id, name, vendor, system_type, team_owner, environment, monthly_cost_estimate, created_at')
+    .select('id, name, vendor, system_type, team_owner, environment, monthly_cost_estimate, primary_model, usage_amount, usage_unit, created_at')
     .eq('id', id)
     .single();
 

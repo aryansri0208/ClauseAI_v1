@@ -10,6 +10,9 @@ export interface AISystemRow {
   team_owner: string | null;
   environment: string | null;
   monthly_cost_estimate: number | null;
+  primary_model: string | null;
+  usage_amount: number | null;
+  usage_unit: string | null;
   created_at: string;
 }
 

@@ -74,6 +74,9 @@ CREATE TABLE IF NOT EXISTS ai_systems (
   team_owner TEXT,
   environment TEXT,
   monthly_cost_estimate DECIMAL(12, 2),
+  primary_model TEXT,
+  usage_amount DECIMAL(18, 2),
+  usage_unit TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 

@@ -11,6 +11,64 @@ export type ConnectVendorPayload = {
   api_key: string;
 };
 
+const KEY_VALIDATORS: Record<string, (key: string) => Promise<boolean>> = {
+  'OpenAI': async (key) => {
+    const r = await fetch('https://api.openai.com/v1/organization/projects?limit=1', {
+      headers: { Authorization: `Bearer ${key}` },
+    });
+    return r.ok;
+  },
+  'Anthropic': async (key) => {
+    const r = await fetch('https://api.anthropic.com/v1/models', {
+      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
+    });
+    return r.ok;
+  },
+  'Google Vertex AI': async (key) => {
+    const r = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models?key=${key}`,
+    );
+    return r.ok;
+  },
+  'Pinecone': async (key) => {
+    const r = await fetch('https://api.pinecone.io/indexes', {
+      headers: { 'Api-Key': key },
+    });
+    return r.ok;
+  },
+  'LangSmith': async (key) => {
+    const r = await fetch(
+      'https://api.smith.langchain.com/api/v1/sessions?limit=1',
+      { headers: { 'x-api-key': key } },
+    );
+    return r.ok;
+  },
+};
+
+export async function validateVendorKey(
+  req: AuthenticatedRequest,
+  res: Response,
+): Promise<void> {
+  const { vendor_name, api_key } = req.body as { vendor_name: string; api_key: string };
+
+  const validator = KEY_VALIDATORS[vendor_name];
+  if (!validator) {
+    res.status(400).json({ valid: false, vendor_name, error: 'Unknown vendor' });
+    return;
+  }
+
+  try {
+    const valid = await validator(api_key);
+    res.json({ valid, vendor_name });
+  } catch (err) {
+    logger.warn('Vendor key validation failed', {
+      vendor: vendor_name,
+      message: err instanceof Error ? err.message : 'Unknown error',
+    });
+    res.json({ valid: false, vendor_name, error: (err as Error).message });
+  }
+}
+
 export async function connectVendor(req: AuthenticatedRequest, res: Response): Promise<void> {
   const user = req.user!;
   const { vendor_name, api_key, company_id: bodyCompanyId } = req.body as ConnectVendorPayload;
