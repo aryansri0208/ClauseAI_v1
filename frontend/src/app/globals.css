@@ -37,10 +37,34 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes clause-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+  @keyframes clause-scan-progress {
+    0% { width: 10%; }
+    50% { width: 70%; }
+    100% { width: 90%; }
+  }
+  @keyframes clause-count-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  @keyframes clause-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+  }
+
   /* Animations */
   --animate-clause-pulse: clause-pulse 2s infinite;
+  --animate-clause-spin: clause-spin 1.2s linear infinite;
+  --animate-clause-scan-progress: clause-scan-progress 2s ease infinite;
+  --animate-clause-count-blink: clause-count-blink 1s ease infinite;
+  --animate-clause-cursor-blink: clause-cursor-blink 1s step-end infinite;
   --animate-clause-fade-up: clause-fade-up 0.5s ease forwards;
   --animate-clause-fade-up-delay-1: clause-fade-up 0.5s 0.1s ease forwards;
+  --animate-clause-fade-up-delay-2: clause-fade-up 0.5s 0.14s ease forwards;
+  --animate-clause-fade-up-delay-3: clause-fade-up 0.5s 0.2s ease forwards;
   --animate-clause-fade-up-card-1: clause-fade-up 0.35s 0.15s ease forwards;
   --animate-clause-fade-up-card-2: clause-fade-up 0.35s 0.2s ease forwards;
   --animate-clause-fade-up-card-3: clause-fade-up 0.35s 0.25s ease forwards;

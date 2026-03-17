@@ -150,6 +150,56 @@ export async function validateVendorKey(
   return handleJsonResponse<{ valid: boolean; vendor_name: string; error?: string }>(response);
 }
 
+/* ------------------------------------------------------------------ */
+/*  Scan                                                               */
+/* ------------------------------------------------------------------ */
+
+export interface ScanLogEntry {
+  vendor: string;
+  message: string;
+  timestamp: string;
+}
+
+export interface ScanStatusResponse {
+  job_id: string;
+  status: 'pending' | 'running' | 'completed' | 'failed';
+  vendors_scanned: number;
+  systems_discovered: number;
+  spend_estimate: string;
+  logs: ScanLogEntry[];
+}
+
+export async function startScan(
+  companyId: string,
+  options?: RequestInit,
+): Promise<{ job_id: string; status: string }> {
+  const response = await fetch(`${API_BASE_URL}/api/scan/start`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers ?? {}),
+    },
+    body: JSON.stringify({ company_id: companyId }),
+    ...options,
+  });
+  return handleJsonResponse<{ job_id: string; status: string }>(response);
+}
+
+export async function getScanStatus(
+  jobId: string,
+  options?: RequestInit,
+): Promise<ScanStatusResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/scan/${jobId}/status`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options?.headers ?? {}),
+    },
+    ...options,
+  });
+  return handleJsonResponse<ScanStatusResponse>(response);
+}
+
 /** Fetch company by id (backend may expose GET /api/company/:id) */
 export async function getCompany(
   companyId: string,
