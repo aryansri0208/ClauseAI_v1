@@ -44,17 +44,27 @@ function buildUsageSummary(vendor: string, usage: NormalizedVendorUsage): string
       parts.push(`Found index '${u.modelOrResource}' · ${count} vectors`);
     }
   } else if (models.length > 0) {
-    const display = models.length <= 4 ? models.join(', ') : models.slice(0, 3).join(', ') + ` +${models.length - 3} more`;
+    const display =
+      models.length <= 4
+        ? models.join(', ')
+        : models.slice(0, 3).join(', ') + ` +${models.length - 3} more`;
     parts.push(`Found ${display}`);
   }
 
   if (usage.projects.length > 0) {
-    parts.push(`${usage.projects.length} project${usage.projects.length === 1 ? '' : 's'}`);
+    parts.push(
+      `${usage.projects.length} project${usage.projects.length === 1 ? '' : 's'}`,
+    );
   }
 
   const totalCost = usage.costMetrics.reduce((s, c) => s + c.amount, 0);
   if (totalCost > 0) {
     parts.push(`Total cost: ${formatCost(totalCost)}/mo`);
+  }
+
+  const totalUsage = usage.usage.reduce((s, u) => s + (u.usageAmount ?? 0), 0);
+  if (totalUsage === 0 && totalCost === 0) {
+    parts.push('No usage detected on this key yet');
   }
 
   return parts.join(' · ') || 'No usage data found';
@@ -133,12 +143,71 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
           compliance_risk: inferred.compliance_risk,
           rawModelOrResource: sys.rawModelOrResource,
         });
+
+        await log(
+          conn.vendor_name,
+          `Classified "${sys.name}" → ${inferred.system_type} · ${inferred.environment}`,
+        );
+
+        if (inferred.confidence >= 0.8) {
+          await log(
+            conn.vendor_name,
+            `Inferred team: ${inferred.team_owner} · key prefix match · confidence ${Math.round(inferred.confidence * 100)}%`,
+          );
+        } else if (inferred.team_owner !== 'Unknown') {
+          await log(
+            conn.vendor_name,
+            `Inferred team: ${inferred.team_owner} · vendor default · confidence ${Math.round(inferred.confidence * 100)}%`,
+          );
+        } else {
+          await log(
+            conn.vendor_name,
+            `Team owner: unresolved · needs manual classification`,
+          );
+        }
+
+        if (inferred.compliance_risk !== 'low') {
+          await log(
+            conn.vendor_name,
+            `Flagged ${sys.name} · ${inferred.compliance_risk} compliance risk`,
+          );
+        } else {
+          await log(
+            conn.vendor_name,
+            `Compliance: ${inferred.compliance_risk} risk · no flags`,
+          );
+        }
       }
     } catch (err) {
       const msg = (err as Error).message;
       await log(conn.vendor_name, `Error: ${msg}`);
       logger.error('Vendor scan failed', { vendor: conn.vendor_name, scanJobId, error: msg });
     }
+  }
+
+  const scannedVendors = [...new Set(allSystems.map((s) => s.vendor))];
+  for (const vendorName of scannedVendors) {
+    const vendorSystems = allSystems.filter((s) => s.vendor === vendorName);
+    const vendorCost = vendorSystems.reduce(
+      (sum, s) => sum + (s.monthly_cost_estimate ?? 0),
+      0,
+    );
+    const vendorTeams = [
+      ...new Set(
+        vendorSystems
+          .map((s) => s.team_owner)
+          .filter((t) => t && t !== 'Unknown'),
+      ),
+    ];
+    const costStr = vendorCost > 0 ? ` · ${formatCost(vendorCost)}/mo` : '';
+    const teamStr =
+      vendorTeams.length > 0
+        ? ` · ${vendorTeams.length} team${vendorTeams.length === 1 ? '' : 's'} mapped`
+        : '';
+    await log(
+      vendorName,
+      `${vendorSystems.length} system${vendorSystems.length === 1 ? '' : 's'} found${costStr}${teamStr}`,
+    );
   }
 
   for (const s of allSystems) {
@@ -179,7 +248,32 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
     }
   }
 
-  await log(null, `Scan complete · ${allSystems.length} system${allSystems.length === 1 ? '' : 's'} discovered`);
+  const totalCost = allSystems.reduce(
+    (s, sys) => s + (sys.monthly_cost_estimate ?? 0),
+    0,
+  );
+  const totalTeams = [
+    ...new Set(
+      allSystems.map((s) => s.team_owner).filter((t) => t && t !== 'Unknown'),
+    ),
+  ].length;
+  const complianceFlags = allSystems.filter(
+    (s) => s.compliance_risk !== 'low',
+  ).length;
+  const costSummary = totalCost > 0 ? ` · ${formatCost(totalCost)}/mo` : '';
+  const teamSummary =
+    totalTeams > 0
+      ? ` · ${totalTeams} team${totalTeams === 1 ? '' : 's'}`
+      : '';
+  const flagSummary =
+    complianceFlags > 0
+      ? ` · ${complianceFlags} compliance flag${complianceFlags === 1 ? '' : 's'}`
+      : '';
+  await log(
+    null,
+    `Scan complete · ${allSystems.length} system${allSystems.length === 1 ? '' : 's'} discovered${costSummary}${teamSummary}${flagSummary}`,
+  );
+
   await supabase.from('scan_jobs').update({ status: 'completed', completed_at: new Date().toISOString() }).eq('id', scanJobId);
   logger.info('Scan completed', { scanJobId, companyId, systemsCount: allSystems.length });
 }

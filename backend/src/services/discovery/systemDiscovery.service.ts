@@ -8,10 +8,20 @@ const GENERIC_PROJECT_NAMES = new Set([
   'default workspace',
   'google ai studio',
   'unnamed project',
+  'personal',
+  'my project',
+  'test',
+  'main',
 ]);
 
 function isGenericName(name: string): boolean {
   return GENERIC_PROJECT_NAMES.has(name.toLowerCase().trim());
+}
+
+function isOpaqueId(value: string): boolean {
+  return /^(proj_|org-|sk-|key-)/i.test(value) ||
+    /^[a-f0-9-]{32,}$/i.test(value) ||
+    /^[A-Za-z0-9_-]{20,}$/.test(value);
 }
 
 function inferSystemType(vendor: string, modelOrResource?: string): SystemType {
@@ -40,20 +50,42 @@ function inferSystemType(vendor: string, modelOrResource?: string): SystemType {
 }
 
 function inferSystemName(vendor: string, resource: string, projectName?: string): string {
-  if (projectName && !isGenericName(projectName)) {
+  if (projectName && !isGenericName(projectName) && !isOpaqueId(projectName)) {
     return projectName;
   }
 
   const lower = resource.toLowerCase();
+
   if (lower.includes('support') || lower.includes('chat')) return 'Customer Support AI';
   if (lower.includes('copilot') || lower.includes('internal')) return 'Internal Copilot';
   if (lower.includes('summar') || lower.includes('analytics')) return 'Analytics Summarizer';
   if (lower.includes('doc') || lower.includes('document')) return 'Doc Intelligence';
   if (lower.includes('search') || lower.includes('index')) return 'Knowledge Base Search';
   if (lower.includes('email') || lower.includes('sales')) return 'Sales Email Writer';
-  if (vendor === 'Pinecone') return 'Vector DB – ' + resource;
+  if (lower.includes('embed')) return 'Embedding Pipeline';
+  if (lower.includes('eval') || lower.includes('trace')) return 'LLM Eval Pipeline';
 
-  return resource || `${vendor} System`;
+  if (vendor === 'Pinecone') return 'Vector DB – ' + resource;
+  if (vendor === 'LangSmith') return 'LangSmith Trace Pipeline';
+
+  if (/^(gpt-4|gpt-3|o[134]-|chatgpt)/i.test(lower)) {
+    const shortModel = resource.split('-').slice(0, 2).join('-');
+    return `OpenAI ${shortModel} System`;
+  }
+  if (/^claude/i.test(lower)) {
+    const variant = lower.includes('haiku') ? 'Haiku' : lower.includes('opus') ? 'Opus' : 'Sonnet';
+    return `Claude ${variant} System`;
+  }
+  if (/^gemini/i.test(lower)) {
+    const variant = lower.includes('pro') ? 'Pro' : lower.includes('ultra') ? 'Ultra' : 'Flash';
+    return `Gemini ${variant} System`;
+  }
+
+  if (!resource || isOpaqueId(resource)) {
+    return `${vendor} System`;
+  }
+
+  return resource;
 }
 
 /**

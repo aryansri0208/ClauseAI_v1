@@ -72,7 +72,7 @@ function deriveVendorStatus(
   logs: ScanLogEntry[],
 ): { status: VendorScanStatus; statusText: string } {
   const vendorLogs = logs.filter(
-    (l) => l.vendor.toLowerCase() === vendorName.toLowerCase(),
+    (l) => l.vendor?.toLowerCase() === vendorName.toLowerCase(),
   );
 
   if (vendorLogs.length === 0) {
@@ -86,9 +86,10 @@ function deriveVendorStatus(
     return { status: "error", statusText: errorMsg };
   }
 
-  const isDone = messages.some((m) => /fetched|found|complete/i.test(m));
+  const isDone = messages.some((m) => /fetched|found|complete|systems? found/i.test(m));
   if (isDone) {
-    const doneMsg = messages.filter((m) => /fetched|found|complete/i.test(m)).pop()!;
+    const summaryMsg = messages.find((m) => /\d+\s+systems?\s+found/i.test(m));
+    const doneMsg = summaryMsg ?? messages.filter((m) => /fetched|found|complete/i.test(m)).pop()!;
     return { status: "done", statusText: doneMsg };
   }
 
@@ -115,6 +116,96 @@ function logDotColor(message: string): string {
   if (/flag|warn/i.test(message)) return "var(--clause-warning)";
   if (/scanning|reading/i.test(message)) return "var(--clause-accent)";
   return "var(--clause-accent4)";
+}
+
+interface InferenceSummary {
+  systemsFound: number;
+  primaryVendors: string[];
+  topCostDriver: string | null;
+  teamsMapped: string[];
+  complianceNotes: string[];
+  vendorStatuses: Array<{ vendor: string; status: "done" | "scanning" | "pending" }>;
+}
+
+function extractInferences(logs: ScanLogEntry[], vendorVisuals: VendorVisual[]): InferenceSummary {
+  const summary: InferenceSummary = {
+    systemsFound: 0,
+    primaryVendors: [],
+    topCostDriver: null,
+    teamsMapped: [],
+    complianceNotes: [],
+    vendorStatuses: [],
+  };
+
+  const vendorSystemCounts = new Map<string, number>();
+  const teams = new Set<string>();
+  const complianceSet = new Set<string>();
+  const costSystems: Array<{ name: string; cost: number }> = [];
+  const vendorsWithLogs = new Set<string>();
+  const vendorsDone = new Set<string>();
+
+  for (const log of logs) {
+    const msg = log.message;
+    const vendor = log.vendor;
+
+    if (vendor) {
+      vendorsWithLogs.add(vendor);
+    }
+
+    const systemMatch = msg.match(/^(\d+)\s+systems?\s+found/i);
+    if (systemMatch && vendor) {
+      vendorSystemCounts.set(vendor, parseInt(systemMatch[1], 10));
+      vendorsDone.add(vendor);
+    }
+
+    const teamMatch = msg.match(/^Inferred team:\s+([^·]+)/i);
+    if (teamMatch) {
+      const team = teamMatch[1].trim();
+      if (team !== 'undefined' && team !== 'Unknown') {
+        teams.add(team);
+      }
+    }
+
+    const flagMatch = msg.match(/^Flagged\s+(.+?)\s+·\s+(medium|high)\s+compliance risk/i);
+    if (flagMatch) {
+      complianceSet.add(`${flagMatch[2]} risk · ${flagMatch[1]}`);
+    }
+
+    const costMatch = msg.match(/\$([0-9,.]+[kKmM]?)\/mo/);
+    if (costMatch && vendor) {
+      let costVal = costMatch[1].replace(/,/g, '');
+      let multiplier = 1;
+      if (costVal.toLowerCase().endsWith('k')) {
+        multiplier = 1000;
+        costVal = costVal.slice(0, -1);
+      } else if (costVal.toLowerCase().endsWith('m')) {
+        multiplier = 1000000;
+        costVal = costVal.slice(0, -1);
+      }
+      const cost = parseFloat(costVal) * multiplier;
+      if (!isNaN(cost) && cost > 0) {
+        costSystems.push({ name: vendor, cost });
+      }
+    }
+  }
+
+  summary.systemsFound = Array.from(vendorSystemCounts.values()).reduce((s, n) => s + n, 0);
+  summary.primaryVendors = Array.from(vendorsDone);
+  summary.teamsMapped = Array.from(teams);
+  summary.complianceNotes = Array.from(complianceSet);
+
+  if (costSystems.length > 0) {
+    costSystems.sort((a, b) => b.cost - a.cost);
+    summary.topCostDriver = costSystems[0].name;
+  }
+
+  summary.vendorStatuses = vendorVisuals.map((v) => {
+    if (vendorsDone.has(v.apiName)) return { vendor: v.displayName, status: "done" as const };
+    if (vendorsWithLogs.has(v.apiName)) return { vendor: v.displayName, status: "scanning" as const };
+    return { vendor: v.displayName, status: "pending" as const };
+  });
+
+  return summary;
 }
 
 /* ------------------------------------------------------------------ */
@@ -322,8 +413,8 @@ function ScanPageInner() {
               animate={isRunning}
             />
             <CounterCard
-              value={scanStatus?.vendors_scanned ?? 0}
-              label="Vendors scanned"
+              value={scanStatus?.teams_mapped ?? 0}
+              label="Teams mapped"
               color="var(--clause-accent4)"
               animate={isRunning}
             />
@@ -339,7 +430,7 @@ function ScanPageInner() {
           {/* Log feed */}
           <div
             ref={logFeedRef}
-            className="flex flex-1 flex-col overflow-y-auto rounded-[10px] border border-clause-border bg-clause-surface opacity-0 animate-clause-fade-up-delay-2"
+            className="flex min-h-0 max-h-[45vh] flex-1 flex-col overflow-y-auto rounded-[10px] border border-clause-border bg-clause-surface opacity-0 animate-clause-fade-up-delay-2"
           >
             {logs.length === 0 && (
               <div className="px-3.5 py-3 font-mono text-[11px] text-clause-text3">
@@ -371,6 +462,15 @@ function ScanPageInner() {
                 </div>
               );
             })}
+          </div>
+
+          {/* Inferences summary */}
+          <div className="opacity-0 animate-clause-fade-up-delay-2">
+            <InferencePanel
+              logs={logs}
+              vendorVisuals={VENDOR_VISUALS}
+              isRunning={isRunning}
+            />
           </div>
 
           {/* Continue button */}
@@ -512,6 +612,118 @@ function CounterCard({
       </div>
       <div className="mt-1 font-mono text-[9px] uppercase tracking-[1px] text-clause-text3">
         {label}
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/*  InferencePanel                                                     */
+/* ------------------------------------------------------------------ */
+
+function InferencePanel({
+  logs,
+  vendorVisuals,
+  isRunning,
+}: {
+  logs: ScanLogEntry[];
+  vendorVisuals: VendorVisual[];
+  isRunning: boolean;
+}) {
+  const inferences = extractInferences(logs, vendorVisuals);
+
+  if (logs.length === 0) return null;
+
+  const rows: Array<{ label: string; value: string; highlight?: boolean }> = [];
+
+  if (inferences.systemsFound > 0 || !isRunning) {
+    rows.push({
+      label: "Systems found",
+      value: inferences.systemsFound > 0 ? String(inferences.systemsFound) : "0",
+    });
+  }
+
+  if (inferences.primaryVendors.length > 0) {
+    rows.push({
+      label: "Primary vendors",
+      value: inferences.primaryVendors.join(", "),
+    });
+  }
+
+  if (inferences.topCostDriver) {
+    rows.push({
+      label: "Top cost driver",
+      value: inferences.topCostDriver,
+    });
+  }
+
+  if (inferences.teamsMapped.length > 0) {
+    rows.push({
+      label: "Teams mapped",
+      value: inferences.teamsMapped.join(", "),
+    });
+  }
+
+  if (inferences.complianceNotes.length > 0) {
+    rows.push({
+      label: "Compliance",
+      value: inferences.complianceNotes.join("; "),
+      highlight: true,
+    });
+  }
+
+  const pendingOrScanning = inferences.vendorStatuses.filter(
+    (v) => v.status !== "done",
+  );
+  for (const vs of pendingOrScanning) {
+    rows.push({
+      label: vs.vendor,
+      value: vs.status === "scanning" ? "scanning..." : "pending...",
+    });
+  }
+
+  return (
+    <div className="rounded-[10px] border border-clause-border bg-clause-surface">
+      <div className="border-b border-clause-border px-3.5 py-2.5">
+        <div className="font-mono text-[9px] uppercase tracking-[1.5px] text-clause-text3">
+          Inferences so far
+        </div>
+        <div className="mt-1 font-mono text-[9px] uppercase tracking-[1px] text-clause-text3 opacity-60">
+          Auto-detected · review after scan completes
+        </div>
+      </div>
+
+      <div className="divide-y divide-clause-border">
+        {rows.map((row, i) => (
+          <div
+            key={i}
+            className="flex items-center justify-between gap-4 px-3.5 py-2.5"
+          >
+            <span className="shrink-0 font-mono text-[11px] text-clause-text2">
+              {row.label}
+            </span>
+            <span
+              className={`text-right font-mono text-[11px] ${
+                row.highlight
+                  ? "rounded border border-[rgba(255,107,107,0.2)] bg-[rgba(255,107,107,0.06)] px-2 py-0.5 text-clause-accent3"
+                  : row.value === "scanning..." || row.value === "pending..."
+                    ? "text-clause-text3"
+                    : "rounded border border-[rgba(0,229,255,0.15)] bg-[rgba(0,229,255,0.04)] px-2 py-0.5 text-clause-accent"
+              }`}
+            >
+              {row.value}
+              {(row.value === "scanning..." || row.value === "pending...") && isRunning && (
+                <span className="animate-clause-cursor-blink">_</span>
+              )}
+            </span>
+          </div>
+        ))}
+
+        {rows.length === 0 && (
+          <div className="px-3.5 py-3 font-mono text-[11px] text-clause-text3">
+            Analyzing vendor data…
+          </div>
+        )}
       </div>
     </div>
   );

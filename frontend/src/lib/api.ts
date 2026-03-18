@@ -166,6 +166,7 @@ export interface ScanStatusResponse {
   vendors_scanned: number;
   systems_discovered: number;
   spend_estimate: string;
+  teams_mapped: number;
   logs: ScanLogEntry[];
 }
 
@@ -198,6 +199,79 @@ export async function getScanStatus(
     ...options,
   });
   return handleJsonResponse<ScanStatusResponse>(response);
+}
+
+/* ------------------------------------------------------------------ */
+/*  Systems                                                            */
+/* ------------------------------------------------------------------ */
+
+export interface SystemInference {
+  system_id: string;
+  field_name: string;
+  inferred_value: string | null;
+  user_override: string | null;
+  confidence_score: number | null;
+}
+
+export interface ComplianceFlag {
+  system_id: string;
+  flag_type: string;
+  status: string;
+}
+
+export interface AISystem {
+  id: string;
+  name: string;
+  vendor: string;
+  system_type: string | null;
+  team_owner: string | null;
+  environment: string | null;
+  monthly_cost_estimate: number | null;
+  primary_model: string | null;
+  usage_amount: number | null;
+  usage_unit: string | null;
+  created_at: string;
+  inferences: SystemInference[];
+  compliance_flags: ComplianceFlag[];
+}
+
+export async function listSystems(
+  companyId: string,
+  options?: RequestInit,
+): Promise<{ systems: AISystem[] }> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/systems?company_id=${encodeURIComponent(companyId)}`,
+    {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.headers ?? {}),
+      },
+      ...options,
+    },
+  );
+  return handleJsonResponse<{ systems: AISystem[] }>(response);
+}
+
+export async function updateSystem(
+  systemId: string,
+  companyId: string,
+  updates: { team_owner?: string; system_type?: string; environment?: string },
+  options?: RequestInit,
+): Promise<AISystem> {
+  const response = await fetch(
+    `${API_BASE_URL}/api/systems/${systemId}?company_id=${encodeURIComponent(companyId)}`,
+    {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options?.headers ?? {}),
+      },
+      body: JSON.stringify(updates),
+      ...options,
+    },
+  );
+  return handleJsonResponse<AISystem>(response);
 }
 
 /** Fetch company by id (backend may expose GET /api/company/:id) */

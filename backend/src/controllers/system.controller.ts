@@ -5,13 +5,19 @@ import { InferableField } from '../types/system.types';
 
 export async function listSystems(req: AuthenticatedRequest, res: Response): Promise<void> {
   const user = req.user!;
+  const companyId = req.query.company_id as string | undefined;
   const supabase = getSupabaseAdmin();
 
-  const { data: company } = await supabase
+  let companyQuery = supabase
     .from('companies')
     .select('id')
-    .eq('owner_user_id', user.id)
-    .single();
+    .eq('owner_user_id', user.id);
+
+  if (companyId) {
+    companyQuery = companyQuery.eq('id', companyId);
+  }
+
+  const { data: company } = await companyQuery.single();
 
   if (!company) {
     res.status(404).json({ error: 'Company not found' });
@@ -92,12 +98,18 @@ export async function updateSystem(req: AuthenticatedRequest, res: Response): Pr
   }
 
   const supabase = getSupabaseAdmin();
+  const companyId = req.query.company_id as string | undefined;
 
-  const { data: company } = await supabase
+  let companyQuery = supabase
     .from('companies')
     .select('id')
-    .eq('owner_user_id', user.id)
-    .single();
+    .eq('owner_user_id', user.id);
+
+  if (companyId) {
+    companyQuery = companyQuery.eq('id', companyId);
+  }
+
+  const { data: company } = await companyQuery.single();
 
   if (!company) {
     res.status(404).json({ error: 'Company not found' });
