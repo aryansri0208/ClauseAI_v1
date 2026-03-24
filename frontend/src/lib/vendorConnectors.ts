@@ -71,16 +71,34 @@ async function fetchAnthropicAnalytics(
 ): Promise<VendorIntelligence> {
   const vendorName = "Anthropic";
   try {
-    const response = await fetch(
-      "https://api.anthropic.com/v1/usage?period=month",
-      {
-        headers: {
-          "x-api-key": apiKey,
-          "anthropic-version": "2023-06-01",
-          "Content-Type": "application/json",
-        },
-      }
+    const startingAt = firstDayThisMonth.toISOString();
+    const endingAt = now.toISOString();
+
+    const url = new URL(
+      "https://api.anthropic.com/v1/organizations/usage_report/messages"
     );
+    url.searchParams.set("starting_at", startingAt);
+    url.searchParams.set("ending_at", endingAt);
+    url.searchParams.set("bucket_width", "1d");
+    url.searchParams.append("group_by[]", "model");
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+    });
+
+    if (response.status === 401 || response.status === 403) {
+      return {
+        vendorName,
+        error:
+          "Usage data requires an Admin API key (sk-ant-admin...). " +
+          "Generate one at https://console.anthropic.com/settings/admin-keys. " +
+          "Note: browser requests may also be blocked by CORS — the backend scan is the primary path for analytics.",
+      };
+    }
+
     if (!response.ok) {
       const errBody = await response.text();
       return {
@@ -88,24 +106,43 @@ async function fetchAnthropicAnalytics(
         error: `API ${response.status}: ${errBody.slice(0, 200)}`,
       };
     }
+
     const data = (await response.json()) as {
-      usage?: { input_tokens?: number; output_tokens?: number };
-      models?: string[];
+      data?: Array<{
+        model?: string;
+        input_tokens?: number;
+        output_tokens?: number;
+      }>;
+      has_more?: boolean;
+      next_page?: string;
     };
-    const usage = data.usage ?? {};
-    const tokensUsed =
-      (usage.input_tokens ?? 0) + (usage.output_tokens ?? 0);
+
+    let tokensUsed = 0;
+    const models = new Set<string>();
+    for (const bucket of data.data ?? []) {
+      tokensUsed += (bucket.input_tokens ?? 0) + (bucket.output_tokens ?? 0);
+      if (bucket.model) models.add(bucket.model);
+    }
+
     return {
       vendorName,
       tokensUsed,
-      modelsUsed: data.models ?? [],
-      endpoints: ["usage"],
+      modelsUsed: Array.from(models),
+      endpoints: ["messages"],
     };
   } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("Failed to fetch") || msg.includes("NetworkError")) {
+      return {
+        vendorName,
+        error:
+          "Could not reach Anthropic Admin API (likely blocked by CORS). " +
+          "Usage data is available via the backend scan instead.",
+      };
+    }
     return {
       vendorName,
-      error:
-        e instanceof Error ? e.message : "Failed to fetch Anthropic usage",
+      error: msg || "Failed to fetch Anthropic usage",
     };
   }
 }

@@ -33,7 +33,7 @@ export function inferMetadata(system: NormalizedAISystem): InferredMetadata {
   const vendor = (system.vendor ?? '').toLowerCase();
   const resource = (system.rawModelOrResource ?? '').toLowerCase();
 
-  const { team_owner, confidence: teamConfidence } = inferTeam(name, vendor);
+  const { team: team_owner, confidence: teamConfidence } = inferTeam(name, vendor);
 
   const system_type: SystemType = system.systemType ?? 'Model API';
 

@@ -19,10 +19,11 @@ const KEY_VALIDATORS: Record<string, (key: string) => Promise<boolean>> = {
     return r.ok;
   },
   'Anthropic': async (key) => {
-    const r = await fetch('https://api.anthropic.com/v1/models', {
-      headers: { 'x-api-key': key, 'anthropic-version': '2023-06-01' },
-    });
-    return r.ok;
+    const headers = { 'x-api-key': key, 'anthropic-version': '2023-06-01' };
+    const r = await fetch('https://api.anthropic.com/v1/models', { headers });
+    if (r.ok) return true;
+    const admin = await fetch('https://api.anthropic.com/v1/organizations/me', { headers });
+    return admin.ok;
   },
   'Google Vertex AI': async (key) => {
     const r = await fetch(

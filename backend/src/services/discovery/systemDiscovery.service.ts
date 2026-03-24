@@ -95,7 +95,7 @@ export function normalizeToSystems(vendorUsage: NormalizedVendorUsage): Normaliz
   const systems: NormalizedAISystem[] = [];
   const { vendor, projects, usage, costMetrics } = vendorUsage;
 
-  if (projects.length === 0 && usage.length > 0) {
+  if (projects.length <= 1 && usage.length > 0) {
     usage.forEach((u, i) => {
       const cost = costMetrics[i] ?? costMetrics[0];
       systems.push({

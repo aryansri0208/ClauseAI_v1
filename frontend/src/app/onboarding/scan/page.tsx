@@ -238,15 +238,15 @@ function ScanPageInner() {
       return;
     }
 
-    let cancelled = false;
+    const abortController = new AbortController();
 
     async function kick() {
       try {
         const { job_id } = await startScan(companyId);
-        if (cancelled) return;
+        if (abortController.signal.aborted) return;
         setJobId(job_id);
       } catch (err) {
-        if (cancelled) return;
+        if (abortController.signal.aborted) return;
         setError(
           err instanceof ApiError
             ? err.message
@@ -258,7 +258,7 @@ function ScanPageInner() {
     }
 
     kick();
-    return () => { cancelled = true; };
+    return () => { abortController.abort(); };
   }, [companyId]);
 
   useEffect(() => {
