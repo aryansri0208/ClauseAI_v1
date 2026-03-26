@@ -1,24 +1,52 @@
 import { getSupabaseAdmin } from '../../config/supabase';
 import { decrypt } from '../../utils/encryption';
 import { logger } from '../../config/logger';
+import { env } from '../../config/env';
 import { isVendorName, type VendorName, type NormalizedVendorUsage } from '../../types/vendor.types';
 import { getNormalizedUsage as getOpenAI } from '../vendors/openai.service';
 import { getNormalizedUsage as getAnthropic } from '../vendors/anthropic.service';
-import { getNormalizedUsage as getGoogle } from '../vendors/google.service';
+import { getNormalizedUsage as getGoogle, type GoogleServiceConfig } from '../vendors/google.service';
 import { getNormalizedUsage as getPinecone } from '../vendors/pinecone.service';
 import { getNormalizedUsage as getLangSmith } from '../vendors/langsmith.service';
 import { normalizeToSystems } from '../discovery/systemDiscovery.service';
 import { inferMetadata } from '../inference/metadataInference.service';
 
+type VendorConfigBuilder = (apiKey: string) => any;
+
 const VENDOR_SERVICES: Record<
   VendorName,
-  (config: { apiKey: string }) => Promise<NormalizedVendorUsage>
+  { buildConfig: VendorConfigBuilder; fetch: (config: any) => Promise<NormalizedVendorUsage> }
 > = {
-  'OpenAI': getOpenAI,
-  'Anthropic': getAnthropic,
-  'Google Vertex AI': getGoogle,
-  'Pinecone': getPinecone,
-  'LangSmith': getLangSmith,
+  'OpenAI': {
+    buildConfig: (apiKey) => ({ apiKey }),
+    fetch: getOpenAI,
+  },
+  'Anthropic': {
+    buildConfig: (apiKey) => ({ apiKey }),
+    fetch: getAnthropic,
+  },
+  'Google Vertex AI': {
+    buildConfig: (apiKey) => {
+      const config: GoogleServiceConfig = { apiKey };
+      if (env.GCP_BQ_PROJECT_ID && env.GCP_BQ_DATASET_ID && env.GCP_BQ_BILLING_TABLE) {
+        config.bigquery = {
+          projectId: env.GCP_BQ_PROJECT_ID,
+          datasetId: env.GCP_BQ_DATASET_ID,
+          billingTableId: env.GCP_BQ_BILLING_TABLE,
+        };
+      }
+      return config;
+    },
+    fetch: getGoogle,
+  },
+  'Pinecone': {
+    buildConfig: (apiKey) => ({ apiKey }),
+    fetch: getPinecone,
+  },
+  'LangSmith': {
+    buildConfig: (apiKey) => ({ apiKey }),
+    fetch: getLangSmith,
+  },
 };
 
 function formatNumber(n: number): string {
@@ -111,13 +139,13 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
 
   for (const conn of connections) {
     if (!isVendorName(conn.vendor_name)) continue;
-    const getUsage = VENDOR_SERVICES[conn.vendor_name];
-    if (!getUsage) continue;
+    const service = VENDOR_SERVICES[conn.vendor_name];
+    if (!service) continue;
 
     try {
       await log(conn.vendor_name, `Connected to ${conn.vendor_name} API · reading usage data`);
       const apiKey = decrypt(conn.encrypted_api_key);
-      const vendorUsage = await getUsage({ apiKey });
+      const vendorUsage = await service.fetch(service.buildConfig(apiKey));
 
       await log(conn.vendor_name, buildUsageSummary(conn.vendor_name, vendorUsage));
 

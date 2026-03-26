@@ -1,6 +1,7 @@
 import type { NormalizedVendorUsage } from '../../types/vendor.types';
 import type { NormalizedAISystem } from '../../types/system.types';
 import type { SystemType } from '../../types/system.types';
+import { estimateMonthlyCost } from '../pricing/modelPricing.service';
 
 const GENERIC_PROJECT_NAMES = new Set([
   'default',
@@ -96,13 +97,21 @@ export function normalizeToSystems(vendorUsage: NormalizedVendorUsage): Normaliz
   const { vendor, projects, usage, costMetrics } = vendorUsage;
 
   if (projects.length <= 1 && usage.length > 0) {
+    const shouldSplitCost = costMetrics.length === 1 && usage.length > 1;
     usage.forEach((u, i) => {
-      const cost = costMetrics[i] ?? costMetrics[0];
+      const rawCost = costMetrics[i] ?? costMetrics[0];
+      const cost = shouldSplitCost && rawCost
+        ? { ...rawCost, amount: rawCost.amount / usage.length }
+        : rawCost;
+      const costAmount = cost?.amount
+        ?? (u.modelOrResource && u.usageAmount
+          ? estimateMonthlyCost(u.modelOrResource, u.usageAmount) ?? undefined
+          : undefined);
       systems.push({
         name: inferSystemName(vendor, u.modelOrResource ?? 'Unknown'),
         vendor,
         systemType: inferSystemType(vendor, u.modelOrResource),
-        monthlyCostEstimate: cost?.amount,
+        monthlyCostEstimate: costAmount,
         rawModelOrResource: u.modelOrResource,
       });
     });
@@ -113,12 +122,17 @@ export function normalizeToSystems(vendorUsage: NormalizedVendorUsage): Normaliz
     const projectUsage = usage.filter((u) => u.projectId === project.id || !u.projectId);
     const cost = costMetrics.find((c) => c.projectId === project.id) ?? costMetrics[idx] ?? costMetrics[0];
     const primaryModel = projectUsage[0]?.modelOrResource;
+    const primaryTokens = projectUsage[0]?.usageAmount;
+    const costAmount = cost?.amount
+      ?? (primaryModel && primaryTokens
+        ? estimateMonthlyCost(primaryModel, primaryTokens) ?? undefined
+        : undefined);
 
     systems.push({
       name: inferSystemName(vendor, primaryModel ?? project.id, project.name),
       vendor,
       systemType: inferSystemType(vendor, primaryModel),
-      monthlyCostEstimate: cost?.amount,
+      monthlyCostEstimate: costAmount,
       rawProjectId: project.id,
       rawModelOrResource: primaryModel,
     });
@@ -126,12 +140,18 @@ export function normalizeToSystems(vendorUsage: NormalizedVendorUsage): Normaliz
 
   if (systems.length === 0 && usage.length > 0) {
     const cost = costMetrics[0];
+    const fallbackModel = usage[0].modelOrResource;
+    const fallbackTokens = usage[0].usageAmount;
+    const costAmount = cost?.amount
+      ?? (fallbackModel && fallbackTokens
+        ? estimateMonthlyCost(fallbackModel, fallbackTokens) ?? undefined
+        : undefined);
     systems.push({
-      name: inferSystemName(vendor, usage[0].modelOrResource ?? 'API'),
+      name: inferSystemName(vendor, fallbackModel ?? 'API'),
       vendor,
-      systemType: inferSystemType(vendor, usage[0].modelOrResource),
-      monthlyCostEstimate: cost?.amount,
-      rawModelOrResource: usage[0].modelOrResource,
+      systemType: inferSystemType(vendor, fallbackModel),
+      monthlyCostEstimate: costAmount,
+      rawModelOrResource: fallbackModel,
     });
   }
 

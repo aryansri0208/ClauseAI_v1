@@ -42,5 +42,10 @@ export const env = {
   AWS_SECRET_ACCESS_KEY: getEnvOptional('AWS_SECRET_ACCESS_KEY'),
   AWS_SECRETS_PREFIX: getEnvOptional('AWS_SECRETS_PREFIX') ?? 'clauseai/',
 
+  GCP_BQ_PROJECT_ID: getEnvOptional('GCP_BQ_PROJECT_ID'),
+  GCP_BQ_DATASET_ID: getEnvOptional('GCP_BQ_DATASET_ID'),
+  GCP_BQ_BILLING_TABLE: getEnvOptional('GCP_BQ_BILLING_TABLE'),
+  GOOGLE_APPLICATION_CREDENTIALS: getEnvOptional('GOOGLE_APPLICATION_CREDENTIALS'),
+
   LOG_LEVEL: getEnvOptional('LOG_LEVEL') ?? 'info',
 } as const;
