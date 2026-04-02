@@ -1,5 +1,6 @@
 import type { NormalizedVendorUsage } from '../../types/vendor.types';
 import { logger } from '../../config/logger';
+import { GOOGLE_BIGQUERY_BILLING_ROWS } from '../../__fixtures__/google.fixtures';
 
 export interface GoogleServiceConfig {
   apiKey: string;
@@ -235,7 +236,48 @@ export async function fetchCostMetrics(config: GoogleServiceConfig): Promise<Nor
   return [];
 }
 
+async function buildMockBigQueryResponse(config: GoogleServiceConfig): Promise<NormalizedVendorUsage> {
+  const modelMap = new Map<string, number>();
+  const costMap = new Map<string, number>();
+  const projectIds = new Set<string>();
+
+  for (const row of GOOGLE_BIGQUERY_BILLING_ROWS) {
+    const parsed = extractModelFromSku(row.sku_description);
+    if (!parsed) continue;
+    modelMap.set(parsed.model, (modelMap.get(parsed.model) ?? 0) + row.usage_amount);
+    costMap.set(row.project_id, (costMap.get(row.project_id) ?? 0) + row.cost);
+    projectIds.add(row.project_id);
+  }
+
+  const usage = Array.from(modelMap.entries()).map(([model, tokens]) => ({
+    modelOrResource: model,
+    usageAmount: tokens,
+    unit: 'tokens',
+  }));
+
+  const costMetrics = Array.from(costMap.entries()).map(([projectId, amount]) => ({
+    projectId,
+    amount,
+    currency: 'USD',
+    period: 'month',
+  }));
+
+  const projects = Array.from(projectIds).map(id => ({ id, name: id }));
+
+  return {
+    vendor: 'Google Vertex AI',
+    projects,
+    usage,
+    costMetrics,
+  };
+}
+
 export async function getNormalizedUsage(config: GoogleServiceConfig): Promise<NormalizedVendorUsage> {
+  if (process.env.NODE_ENV === 'development' && !config.bigquery?.projectId) {
+    logger.info('Google: using mock BigQuery data (dev mode — no BQ env vars configured)');
+    return buildMockBigQueryResponse(config);
+  }
+
   const [projects, usage, costMetrics] = await Promise.all([
     fetchProjects(config),
     fetchUsage(config),

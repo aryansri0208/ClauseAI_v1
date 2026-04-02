@@ -9,6 +9,11 @@ export interface InferredMetadata {
   confidence: number;
 }
 
+interface InferenceContext {
+  usageAmount?: number;
+  monthlyCostEstimate?: number;
+}
+
 const TEAM_PATTERNS: Array<{ test: RegExp; team: string }> = [
   { test: /support|customer|chat|helpdesk|ticket/, team: 'Platform Eng' },
   { test: /copilot|internal|ml|model|train/, team: 'ML Team' },
@@ -25,10 +30,18 @@ const VENDOR_DEFAULT_TEAMS: Record<string, string> = {
   langsmith: 'ML Team',
 };
 
+const GENERIC_NAME_PATTERN = /^[a-z\s]+ system$/i;
+const MODEL_DERIVED_NAME_PATTERN =
+  /^(gpt|gemini|claude|llama|mistral|command|embed|text-|dall-e|whisper|tts)/i;
+
 /**
- * Simple heuristic inference for team ownership, system type, and compliance risk.
+ * Heuristic inference for team ownership, system type, compliance risk, and
+ * multi-signal confidence scoring.
  */
-export function inferMetadata(system: NormalizedAISystem): InferredMetadata {
+export function inferMetadata(
+  system: NormalizedAISystem,
+  context?: InferenceContext,
+): InferredMetadata {
   const name = (system.name ?? '').toLowerCase();
   const vendor = (system.vendor ?? '').toLowerCase();
   const resource = (system.rawModelOrResource ?? '').toLowerCase();
@@ -43,13 +56,54 @@ export function inferMetadata(system: NormalizedAISystem): InferredMetadata {
 
   const compliance_risk = inferComplianceRisk(name, vendor, resource);
 
+  const confidence = computeOverallConfidence(system, teamConfidence, context);
+
   return {
     team_owner,
     system_type,
     environment,
     compliance_risk,
-    confidence: teamConfidence,
+    confidence,
   };
+}
+
+function computeOverallConfidence(
+  system: NormalizedAISystem,
+  teamConfidence: number,
+  context?: InferenceContext,
+): number {
+  const costValue = context?.monthlyCostEstimate ?? system.monthlyCostEstimate;
+  const hasCostData = costValue != null && costValue > 0 ? 1.0 : 0.3;
+
+  const usageValue = context?.usageAmount;
+  const hasUsageData = usageValue != null && usageValue > 0 ? 1.0 : 0.2;
+
+  const hasDescriptiveName = scoreNameQuality(system.name ?? '', system.vendor ?? '');
+
+  const raw =
+    teamConfidence * 0.4 +
+    hasCostData * 0.25 +
+    hasDescriptiveName * 0.2 +
+    hasUsageData * 0.15;
+
+  return Math.min(0.95, Math.max(0.1, parseFloat(raw.toFixed(4))));
+}
+
+function scoreNameQuality(name: string, vendor: string): number {
+  const trimmed = name.trim();
+  if (!trimmed) return 0.2;
+
+  const vendorPrefix = vendor.split(' ')[0];
+  if (
+    GENERIC_NAME_PATTERN.test(trimmed) ||
+    trimmed.toLowerCase() === `${vendorPrefix.toLowerCase()} system`
+  ) {
+    return 0.2;
+  }
+
+  if (MODEL_DERIVED_NAME_PATTERN.test(trimmed)) return 0.5;
+
+  return 1.0;
 }
 
 function inferTeam(name: string, vendor: string): { team: string; confidence: number } {

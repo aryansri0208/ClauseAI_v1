@@ -98,6 +98,8 @@ function buildUsageSummary(vendor: string, usage: NormalizedVendorUsage): string
   return parts.join(' · ') || 'No usage data found';
 }
 
+type CostSource = 'vendor-billing' | 'estimated' | 'none';
+
 interface CollectedSystem {
   name: string;
   vendor: string;
@@ -111,6 +113,7 @@ interface CollectedSystem {
   confidence: number;
   compliance_risk: string;
   rawModelOrResource?: string;
+  costSource: CostSource;
 }
 
 export async function runScan(scanJobId: string, companyId: string): Promise<void> {
@@ -151,11 +154,23 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
 
       const systems = normalizeToSystems(vendorUsage);
       for (const sys of systems) {
-        const inferred = inferMetadata(sys);
-
         const matchingUsage = vendorUsage.usage.find(
           (u) => u.projectId === sys.rawProjectId || u.modelOrResource === sys.rawModelOrResource,
         ) ?? vendorUsage.usage[0];
+
+        const inferred = inferMetadata(sys, {
+          usageAmount: matchingUsage?.usageAmount ?? undefined,
+          monthlyCostEstimate: sys.monthlyCostEstimate ?? undefined,
+        });
+
+        const vendorCostEntry = vendorUsage.costMetrics.find(
+          (c) => c.amount > 0 && (c.projectId === sys.rawProjectId || !c.projectId),
+        );
+        const cost = sys.monthlyCostEstimate ?? 0;
+        let costSource: CostSource = 'none';
+        if (cost > 0) {
+          costSource = vendorCostEntry ? 'vendor-billing' : 'estimated';
+        }
 
         allSystems.push({
           name: sys.name,
@@ -170,12 +185,22 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
           confidence: inferred.confidence,
           compliance_risk: inferred.compliance_risk,
           rawModelOrResource: sys.rawModelOrResource,
+          costSource,
         });
 
         await log(
           conn.vendor_name,
           `Classified "${sys.name}" → ${inferred.system_type} · ${inferred.environment}`,
         );
+
+        if (cost > 0) {
+          const sourceLabel = costSource === 'vendor-billing'
+            ? 'source: vendor billing API'
+            : 'source: estimated from token usage';
+          await log(conn.vendor_name, `Cost: ${formatCost(cost)}/mo · ${sourceLabel}`);
+        } else {
+          await log(conn.vendor_name, `Cost: no usage data · connect admin key for billing data`);
+        }
 
         if (inferred.confidence >= 0.8) {
           await log(
@@ -227,7 +252,9 @@ export async function runScan(scanJobId: string, companyId: string): Promise<voi
           .filter((t) => t && t !== 'Unknown'),
       ),
     ];
-    const costStr = vendorCost > 0 ? ` · ${formatCost(vendorCost)}/mo` : '';
+    const hasVendorBilling = vendorSystems.some((s) => s.costSource === 'vendor-billing');
+    const costSourceLabel = hasVendorBilling ? ' (vendor billing)' : ' (estimated)';
+    const costStr = vendorCost > 0 ? ` · ${formatCost(vendorCost)}/mo${costSourceLabel}` : '';
     const teamStr =
       vendorTeams.length > 0
         ? ` · ${vendorTeams.length} team${vendorTeams.length === 1 ? '' : 's'} mapped`
